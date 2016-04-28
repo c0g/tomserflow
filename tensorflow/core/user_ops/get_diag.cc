@@ -1,95 +1,69 @@
+
+//Copyright (c) 2016, GPU code Tom Nickson. All rights reserved.
+//Copyright (c) 2016, Alexander G. de G. Matthews and James Hensman. All rights reserved.
 #include "tensorflow/core/framework/op.h"
-
-REGISTER_OP("GetDiag").Input("l: T").Output("g: T").Attr( "T: {float, double}").Doc("Get diagonal of a square matrix.");
-REGISTER_OP("GetDiagGPU").Input("l: T").Output("g: T").Attr( "T: {float, double}").Doc("Get diagonal of a square matrix.");
-
 #include "tensorflow/core/framework/op_kernel.h"
+#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tensorflow/core/framework/tensor_types.h"
+#include "get_diag_func.h"
+#include "get_diag_func_cpu.h"
+
+#include <typeinfo>
+#include <iostream>
+
+REGISTER_OP("GetDiag").Input("l: T").Output("g: T").Attr("T : {float, double}").Doc("Get diagonal of a square matrix.");
 
 using namespace tensorflow;
-template <typename T>
+typedef Eigen::ThreadPoolDevice CPUDevice;
+typedef Eigen::GpuDevice GPUDevice;
+
+template <typename Device, typename T>
 class GetDiag : public OpKernel {
     public:
     
-    explicit GetDiag(OpKernelConstruction* context) : OpKernel(context) {}
-    
-    void Compute(OpKernelContext* context) override {
+        explicit GetDiag(OpKernelConstruction* context) : OpKernel(context) {}
+        
+        void Compute(OpKernelContext* context) override {
 
-    const Tensor& input_tensor = context->input(0); 
-    
-    OP_REQUIRES(context, TensorShapeUtils::IsMatrix(input_tensor.shape()), errors::InvalidArgument("In[0] is not a matrix"));
-    OP_REQUIRES(context, input_tensor.dim_size(0) == input_tensor.dim_size(1), errors::InvalidArgument("Input matrix must be square."));        
+            const Tensor& input_tensor = context->input(0);
+            
+            // Ensure is a square matrix
+            OP_REQUIRES(context, TensorShapeUtils::IsMatrix(input_tensor.shape()), errors::InvalidArgument("In[0] is not a matrix"));
+            OP_REQUIRES(context, input_tensor.dim_size(0) == input_tensor.dim_size(1), errors::InvalidArgument("Input matrix must be square."));        
 
-    const int N = input_tensor.dim_size(0);
+            const int N = input_tensor.dim_size(0);
 
-    Tensor* output_tensor = NULL;
-    
-    const TensorShape output_shape = TensorShape({ N }); 
-    OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output_tensor));    
-    
-    // Create an output tensor
-    auto output = output_tensor->template flat<T>();
-    auto input = input_tensor.template matrix<T>();
-       
-    //Could presumably be vectorized if this became a bottleneck.
-    for (int i = 0; i < N; i++) {
-      output(i) = input(i,i);
-    }
-    
-    }
-};
-
-template <typename T>
-void GetDiagKernelLauncher(const T* in, const int N, const int stride, T* out);
-
-template <typename T>
-class GetDiagGPU : public OpKernel {
-    public:
-    
-    explicit GetDiagGPU(OpKernelConstruction* context) : OpKernel(context) {}
-    
-    void Compute(OpKernelContext* context) override {
-
-    const Tensor& input_tensor = context->input(0); 
-    
-    OP_REQUIRES(context, TensorShapeUtils::IsMatrix(input_tensor.shape()), errors::InvalidArgument("In[0] is not a matrix"));
-    OP_REQUIRES(context, input_tensor.dim_size(0) == input_tensor.dim_size(1), errors::InvalidArgument("Input matrix must be square."));        
-
-    const int N = input_tensor.dim_size(0);
-
-    Tensor* output_tensor = NULL;
-    
-    const TensorShape output_shape = TensorShape({ N }); 
-    OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output_tensor));    
-    
-    // Create an output tensor
-    auto output = output_tensor->template flat<T>();
-    auto input = input_tensor.template matrix<T>();
-       
-    GetDiagKernelLauncher(input.data(), N, N, output.data());
-    
-    }
+            Tensor* output_tensor = NULL;
+            
+            const TensorShape output_shape = TensorShape({ N }); 
+            OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output_tensor));    
+            auto in = input_tensor.flat<T>().data();
+            auto out = output_tensor->flat<T>().data();
+            functors::get_diag<Device, T> diag;
+            diag(context->eigen_device<Device>(), in, out, N);
+        
+        }
 };
 
 REGISTER_KERNEL_BUILDER(
     Name("GetDiag")
     .Device(DEVICE_CPU)
     .TypeConstraint<float>("T"),
-    GetDiag<float>);
+    GetDiag<CPUDevice, float>);
     
 REGISTER_KERNEL_BUILDER(
     Name("GetDiag")
     .Device(DEVICE_CPU)
     .TypeConstraint<double>("T"),
-    GetDiag<double>);
+    GetDiag<CPUDevice,double>);
 
 REGISTER_KERNEL_BUILDER(
     Name("GetDiag")
-    .Device(DEVICE_GPU)
-    .TypeConstraint<float>("T"),
-    GetDiagGPU<float>);
+    .Device(DEVICE_GPU),
+    GetDiag<GPUDevice, float>);
     
 REGISTER_KERNEL_BUILDER(
     Name("GetDiag")
     .Device(DEVICE_GPU)
     .TypeConstraint<double>("T"),
-    GetDiagGPU<double>);
+    GetDiag<GPUDevice, double>);
