@@ -7,8 +7,8 @@
 #if GOOGLE_CUDA
 #define EIGEN_USE_GPU
 
+namespace tensorflow {
 typedef Eigen::GpuDevice GPUDevice;
-
 template<typename T>
 __global__ void TriangleKernelLower(const T * src, T * dst, const int N) {
 	int r = blockDim.y * blockIdx.y + threadIdx.y;
@@ -59,5 +59,5 @@ namespace functors {
 		}
 	};
 }
-
+}
 #endif

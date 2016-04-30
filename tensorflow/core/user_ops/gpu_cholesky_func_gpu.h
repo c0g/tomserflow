@@ -2,6 +2,7 @@
 #include "tensorflow/core/user_ops/gpu_cholesky_func.h"
 #include "cusolverDn.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tensorflow/core/user_ops/triangle_func_gpu.h"
 
 
 namespace tensorflow {
@@ -75,6 +76,9 @@ namespace functors {
 		int devinfo;
 		cusolver_potrf(handle, CUBLAS_FILL_MODE_UPPER, 
 		        localM, out, localM, wspace, wsize, &devinfo);
+
+		functors::lower_tri<GPUDevice, T> tril;
+		tril(d, out, out, localM); // kind of inefficient but minor
 
 		// tidy up
 		cudaFree(wspace);

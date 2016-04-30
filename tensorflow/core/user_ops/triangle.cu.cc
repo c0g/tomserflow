@@ -5,6 +5,7 @@
 
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/user_ops/triangle_func_gpu.h"
+namespace tensorflow {
 typedef Eigen::GpuDevice GPUDevice;
 
 // Instantiate the GPU implementation for GPU number types.
@@ -15,6 +16,6 @@ typedef Eigen::GpuDevice GPUDevice;
 
 REGISTER_FUNCTORS(float);
 REGISTER_FUNCTORS(double);
-
+};
 
 #endif

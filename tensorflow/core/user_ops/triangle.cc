@@ -12,7 +12,7 @@ REGISTER_OP("Triangle").Input("a: T").Output("x: T").Attr( "T: {float, double}")
 
 #include "tensorflow/core/user_ops/triangle_func_cpu.h"
 
-using namespace tensorflow;
+namespace tensorflow {
 typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
@@ -46,7 +46,6 @@ class Triangle : public OpKernel {
 		      // the output shape is a 0-element matrix, so there is nothing to do.
 		      return;
 		    }
-		    
 		    if (Case=="upper")
 		    {
 		        // out_mat = in_mat.template triangularView<Eigen::Upper>();    
@@ -88,3 +87,4 @@ REGISTER_KERNEL_BUILDER(
     .Device(DEVICE_GPU)
     .TypeConstraint<double>("T"),
     Triangle<GPUDevice, double>);
+}

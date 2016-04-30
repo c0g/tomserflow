@@ -30,15 +30,15 @@ limitations under the License.
 namespace tensorflow {
 
 #if GOOGLE_CUDA
-
 namespace {
 template <typename T>
-perftools::gputools::DeviceMemory<T> AsDeviceMemory(const T* cuda_memory) {
-  perftools::gputools::DeviceMemoryBase wrapped(const_cast<T*>(cuda_memory));
-  perftools::gputools::DeviceMemory<T> typed(wrapped);
-  return typed;
+perftools::gputools::DeviceMemory<T> AsDeviceMemory(const T* cuda_memory)
+{
+    perftools::gputools::DeviceMemoryBase wrapped(const_cast<T*>(cuda_memory));
+    perftools::gputools::DeviceMemory<T> typed(wrapped);
+    return typed;
 }
-}  // namespace
+}//namespace
 
 #endif  // GOOGLE_CUDA
 

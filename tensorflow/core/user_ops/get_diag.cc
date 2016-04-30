@@ -8,8 +8,6 @@
 #include "get_diag_func.h"
 #include "get_diag_func_cpu.h"
 
-#include <typeinfo>
-#include <iostream>
 
 REGISTER_OP("GetDiag").Input("l: T").Output("g: T").Attr("T : {float, double}").Doc("Get diagonal of a square matrix.");
 

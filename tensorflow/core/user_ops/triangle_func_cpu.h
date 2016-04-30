@@ -2,7 +2,7 @@
 #include "tensorflow/core/user_ops/triangle_func.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 typedef Eigen::ThreadPoolDevice CPUDevice;
-
+namespace tensorflow {
 // partial specialisation for CPU
 namespace functors {	
 	template<typename T>
@@ -30,4 +30,5 @@ namespace functors {
 			out_mat = in_mat.template triangularView<Eigen::Lower>();
 		}
 	};
+}
 }
