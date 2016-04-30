@@ -8,6 +8,7 @@ typedef Eigen::GpuDevice GPUDevice;
 
 // Instantiate the GPU implementation for GPU number types.
 template struct tensorflow::CholgradHelper<GPUDevice, float>;
+template struct tensorflow::CholgradHelper<GPUDevice, double>;
 // template struct tensorflow::functors::ComputeCholGrad<GPUDevice, double>;
 
 

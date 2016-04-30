@@ -17,8 +17,8 @@ limitations under the License.
 #define EIGEN_USE_THREADS
 
 #include "tensorflow/core/framework/op.h"
-REGISTER_OP("GpuCholGrad").Input("l: float32").Input("lbar: float32")
-    .Output("abar: float32")
+REGISTER_OP("GpuCholGrad").Input("l: T").Input("lbar: T")
+    .Output("abar: T").Attr("T: {float, double}")
     .Doc("Gradients from Lbar pushed back to Abar");
 
 #include "tensorflow/core/framework/op_kernel.h"
@@ -120,11 +120,11 @@ public:
             int ldc = C.ld;
 
             perftools::gputools::blas::Transpose real_transa = transa ? 
-                perftools::gputools::blas::Transpose::kNoTranspose : 
-                perftools::gputools::blas::Transpose::kTranspose;
+                perftools::gputools::blas::Transpose::kTranspose : 
+                perftools::gputools::blas::Transpose::kNoTranspose;
             perftools::gputools::blas::Transpose real_transb = transb ? 
-                perftools::gputools::blas::Transpose::kNoTranspose : 
-                perftools::gputools::blas::Transpose::kTranspose;
+                perftools::gputools::blas::Transpose::kTranspose : 
+                perftools::gputools::blas::Transpose::kNoTranspose;
 
             stream->ThenBlasGemm(
                 real_transb, real_transa,
@@ -237,14 +237,14 @@ public:
             T zero = 0.0;
             gemm(stream, true, false, one, L, Lbar, zero, Abar);
             stream->ok();
-            // P <- Phi(L^T Lbar) + Phi(L^T Lbar)^T
-            // symmetrise(cudaStream, Abar);
-            stream->ok();
-            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
-            trsm(stream, 'L', 'L', true, one, L, Abar);
-            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
-            trsm(stream, 'R', 'L', true, one, L, Abar);
-            stream->ok();
+            // // P <- Phi(L^T Lbar) + Phi(L^T Lbar)^T
+            // // symmetrise(cudaStream, Abar);
+            // stream->ok();
+            // // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
+            // trsm(stream, 'L', 'L', true, one, L, Abar);
+            // // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
+            // trsm(stream, 'R', 'L', true, one, L, Abar);
+            // stream->ok();
             // P <- Phi(L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1)
             // phi(cudaStream, Abar);
         }
@@ -260,10 +260,12 @@ public:
 // REGISTER_LINALG_OP("CholeskyGrad", (CholeskyGrad<double>), double);
 REGISTER_KERNEL_BUILDER(
     Name("GpuCholGrad")
-    .Device(DEVICE_GPU),
+    .Device(DEVICE_GPU)
+    .TypeConstraint<float>("T"),
     CholeskyGrad<GPUDevice, float>);
 REGISTER_KERNEL_BUILDER(
     Name("GpuCholGrad")
-    .Device(DEVICE_GPU),
+    .Device(DEVICE_GPU)
+    .TypeConstraint<double>("T"),
     CholeskyGrad<GPUDevice, double>);
 } // namespace tensorflow
