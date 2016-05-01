@@ -358,11 +358,12 @@ namespace functors {
                     Helper::tril(ctx->eigen_device<GPUDevice>(), parbar.D);
                 }
 
-                // Copy Dbar into pre-allocated scratch memory.
+                
                 // CholeskyGradSymbolic expects (L, Lbar, P) and stores results in P
                 // Therefore call as: CholeskyGradSymbolic(D, DbarCopy, Dbar);
                 int dsize = k - j;
                 if (nz(par.D)) {
+                    // Copy Dbar into pre-allocated scratch memory.
                     Matrix<T> DbarCopy{ scratchptr, 0, dsize, dsize, dsize };
                     Helper::copy(ctx->eigen_device<GPUDevice>(), DbarCopy, cparbar.D);
                     Matrix<const T> cDbarCopy{ scratchptr, 0, dsize, dsize, dsize };
