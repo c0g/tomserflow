@@ -125,7 +125,6 @@ public:
             perftools::gputools::blas::Transpose real_transb = transb ? 
                 perftools::gputools::blas::Transpose::kTranspose : 
                 perftools::gputools::blas::Transpose::kNoTranspose;
-            std::cout << m << " " << k << " " << n << std::endl;
             
             stream->ThenBlasGemm(
                 real_transb, real_transa,
@@ -160,8 +159,6 @@ public:
             auto aptr = AsDeviceMemory(A.data());
             auto bptr = AsDeviceMemory(B.data());
 
-            uint64 m = transa ? A.m : A.n;
-            uint64 n = transa ? A.n : A.m;
             perftools::gputools::blas::Transpose real_transa = transa ? 
                 perftools::gputools::blas::Transpose::kTranspose : 
                 perftools::gputools::blas::Transpose::kNoTranspose;
@@ -191,9 +188,9 @@ public:
                 real_uplo,
                 real_transa, 
                 diagonal,
-                5, 5, alpha,
-                aptr, 5,
-                &bptr, 5);
+                B.n, B.m, alpha,
+                aptr, A.ld,
+                &bptr, B.ld);
         }
     }//anonymous namespace
     namespace functors {
@@ -212,7 +209,6 @@ public:
             const T* Lbarptr = Ltensorbar.flat<T>().data();
             T* Abarptr = Atensorbar->flat<T>().data();
             int M = Ltensor.dim_size(0);
-            std::cout << M << std::endl;
             Matrix<const T> L{ Lptr, 0, M, M, M };
             Matrix<const T> Lbar{ Lbarptr, 0, M, M, M };
             Matrix<T> Abar{ Abarptr, 0, M, M, M };
@@ -228,6 +224,7 @@ public:
             Matrix<T> scratch{ scratchptr, 0, blocksize, blocksize, blocksize };
 
             CholeskyGradSymbolic(ctx, L, Lbar, Abar);
+            ctx->op_device_context()->stream()->BlockHostUntilDone();
         }
         void CholeskyGradSymbolic(OpKernelContext* ctx, Matrix<const T>& L, Matrix<const T>& Lbar, Matrix<T>& Abar)
         {
@@ -249,7 +246,6 @@ public:
             // stream->ok();
             // P <- Phi(L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1)
             Helper::phi(ctx->eigen_device<GPUDevice>(), Abar);
-            stream->ok();
         }
     };
 #endif // GOOGLE_CUDA
