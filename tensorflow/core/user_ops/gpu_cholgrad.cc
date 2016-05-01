@@ -125,15 +125,16 @@ public:
             perftools::gputools::blas::Transpose real_transb = transb ? 
                 perftools::gputools::blas::Transpose::kTranspose : 
                 perftools::gputools::blas::Transpose::kNoTranspose;
-
+            std::cout << m << " " << k << " " << n << std::endl;
+            
             stream->ThenBlasGemm(
                 real_transb, real_transa,
                 m, n, k,
                 alpha,
-                bptr, ldb,
-                aptr, lda,
+                bptr, B.ld,
+                aptr, A.ld,
                 beta,
-                &cptr, ldc);
+                &cptr, C.ld);
         }
 
         // wrapper to rearrange arguments for cuBLAS
@@ -147,7 +148,7 @@ public:
             C = B / A'  |  C' = A \ B'
             C = A' \ B  |  C' = B' / A' 
         */
-        // Rule: switch sides A,B, permute transpose.
+        // Rule: switch sides A,B
         // uplo: switch 'L' to 'U' and vice versa?
 
         template <typename T>
@@ -162,8 +163,8 @@ public:
             uint64 m = transa ? A.m : A.n;
             uint64 n = transa ? A.n : A.m;
             perftools::gputools::blas::Transpose real_transa = transa ? 
-                perftools::gputools::blas::Transpose::kNoTranspose : 
-                perftools::gputools::blas::Transpose::kTranspose;
+                perftools::gputools::blas::Transpose::kTranspose : 
+                perftools::gputools::blas::Transpose::kNoTranspose;
 
             perftools::gputools::blas::Side real_side;
             switch (side) {
@@ -186,11 +187,13 @@ public:
             perftools::gputools::blas::Diagonal diagonal = perftools::gputools::blas::Diagonal::kNonUnit;
 
             stream->ThenBlasTrsm(
-                real_side, real_uplo,
-                real_transa, diagonal,
-                m, n, alpha,
-                aptr, A.ld,
-                &bptr, B.ld);
+                real_side, 
+                real_uplo,
+                real_transa, 
+                diagonal,
+                5, 5, alpha,
+                aptr, 5,
+                &bptr, 5);
         }
     }//anonymous namespace
     namespace functors {
@@ -198,7 +201,7 @@ public:
     template <typename T>
     struct ComputeCholGrad<GPUDevice, T> {
         const int blocksize = 1024;
-
+        using Helper = CholgradHelper<GPUDevice, T>;
         void operator()(OpKernelContext* ctx, const Tensor& Ltensor, const Tensor& Ltensorbar, Tensor* Atensorbar)
         {
             // errors with incomplete type: why??? SO SAD.
@@ -209,14 +212,13 @@ public:
             const T* Lbarptr = Ltensorbar.flat<T>().data();
             T* Abarptr = Atensorbar->flat<T>().data();
             int M = Ltensor.dim_size(0);
+            std::cout << M << std::endl;
             Matrix<const T> L{ Lptr, 0, M, M, M };
             Matrix<const T> Lbar{ Lbarptr, 0, M, M, M };
             Matrix<T> Abar{ Abarptr, 0, M, M, M };
 
             // Copy Lbar into Abar on GPUStream
-            // cudaMemcpyAsync(Abar.data(), Lbar.data(), M * M * sizeof(T),
-            //     cudaMemcpyDeviceToDevice, cudaStream);
-            CholgradHelper<GPUDevice, T>::copy(ctx->eigen_device<GPUDevice>(), Abar, Lbar);
+            Helper::copy(ctx->eigen_device<GPUDevice>(), Abar, Lbar);
 
             // Allocate scratch space (blocksize)
             Tensor scratchtensor;
@@ -230,23 +232,24 @@ public:
         void CholeskyGradSymbolic(OpKernelContext* ctx, Matrix<const T>& L, Matrix<const T>& Lbar, Matrix<T>& Abar)
         {
             auto* stream = ctx->op_device_context()->stream();
-            // auto cudaStream = ctx->eigen_device<GPUDevice>().stream();
 
-            // P <- L^T Lbar
             T one = 1.0;
             T zero = 0.0;
+            // Abar <- L^T Lbar
             gemm(stream, true, false, one, L, Lbar, zero, Abar);
-            stream->ok();
-            // // P <- Phi(L^T Lbar) + Phi(L^T Lbar)^T
-            // // symmetrise(cudaStream, Abar);
             // stream->ok();
-            // // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
-            // trsm(stream, 'L', 'L', true, one, L, Abar);
-            // // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
-            // trsm(stream, 'R', 'L', true, one, L, Abar);
+            // P <- Phi(L^T Lbar) + Phi(L^T Lbar)^T
+            Helper::symmetrise(ctx->eigen_device<GPUDevice>(), Abar);
+            // stream->ok();
+            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
+            trsm(stream, 'L', 'L', true, one, L, Abar);
+            // stream->ok();
+            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1
+            trsm(stream, 'R', 'L', false, one, L, Abar);
             // stream->ok();
             // P <- Phi(L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1)
-            // phi(cudaStream, Abar);
+            Helper::phi(ctx->eigen_device<GPUDevice>(), Abar);
+            stream->ok();
         }
     };
 #endif // GOOGLE_CUDA

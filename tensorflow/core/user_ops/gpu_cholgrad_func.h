@@ -16,8 +16,8 @@ namespace tensorflow {
                 c1 = (c1 == -1) ? n : c1;
                 int newm = r1 - r0;
                 int newn = c1 - c0;
-                int newoffset = r0 * ld + c0;
-                return Matrix<T>{ data(), newoffset, newm, newn, ld };
+                int newoffset = offset + r0 * ld + c0;
+                return Matrix<T>{ dataptr, newoffset, newm, newn, ld };
             }
         };
         template <typename T>
@@ -39,5 +39,8 @@ namespace tensorflow {
         template <typename Device, typename T>
         struct CholgradHelper {
         	static void copy(const Device& d, Matrix<T> dst, Matrix<const T>);
+            static void symmetrise(const Device&, Matrix<T>);
+            static void phi(const Device&, Matrix<T>);
+            static void tril(const Device&, Matrix<T>);
         };
 }
