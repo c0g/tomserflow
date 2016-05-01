@@ -35,7 +35,7 @@ REGISTER_OP("GpuCholGrad").Input("l: T").Input("lbar: T")
 #endif  // GOOGLE_CUDA
 
 #include "tensorflow/core/user_ops/gpu_cholgrad_func.h"
-
+#include <algorithm>
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -137,19 +137,18 @@ public:
         }
 
         // wrapper to rearrange arguments for cuBLAS
-        // cublas does: C = op(A) \ B or C = B / op(A),
+        // cublas does: B = op(A) \ B or B = B / op(A),
         // where op may be transpose or no-transpose.
         // For each config, we change as the following table:
         /*   row major  | col major
             ------------+------------
-            C = A \ B   |  C' = B' / A'
-            C = B / A   |  C' = A' \ B'
-            C = B / A'  |  C' = A \ B'
-            C = A' \ B  |  C' = B' / A' 
+            B = A \ B   |  B' = B' / A'
+            B = B / A   |  B' = A' \ B'
+            B = B / A'  |  B' = A \ B'
+            B = A' \ B  |  B' = B' / A' 
         */
         // Rule: switch sides A,B
-        // uplo: switch 'L' to 'U' and vice versa?
-
+        // uplo: switch 'L' to 'U' and vice versa
         template <typename T>
         void trsm(Stream* stream,
             char side, char uplo,
@@ -192,18 +191,27 @@ public:
                 aptr, A.ld,
                 &bptr, B.ld);
         }
+        template <typename T>
+        bool nz(Matrix<T> & a)
+        {
+            bool ans = true;
+            ans &= a.m > 0;
+            ans &= a.n > 0;
+            return ans;
+        }
     }//anonymous namespace
     namespace functors {
 
     template <typename T>
     struct ComputeCholGrad<GPUDevice, T> {
-        const int blocksize = 1024;
+        const int blocksize = 16;
         using Helper = CholgradHelper<GPUDevice, T>;
         void operator()(OpKernelContext* ctx, const Tensor& Ltensor, const Tensor& Ltensorbar, Tensor* Atensorbar)
         {
+            // const Eigen::GpuDevice dev = ctx->eigen_device<GPUDevice>();
             // errors with incomplete type: why??? SO SAD.
             // workaround seems to be to pass this by reference to an NVCC compiled function
-            // const Eigen::GpuDevice dev = ctx->eigen_device<GPUDevice>();
+            
             auto* stream = ctx->op_device_context()->stream();
             const T* Lptr = Ltensor.flat<T>().data();
             const T* Lbarptr = Ltensorbar.flat<T>().data();
@@ -213,7 +221,7 @@ public:
             Matrix<const T> Lbar{ Lbarptr, 0, M, M, M };
             Matrix<T> Abar{ Abarptr, 0, M, M, M };
 
-            // Copy Lbar into Abar on GPUStream
+            // Copy Lbar into Abar on our stream
             Helper::copy(ctx->eigen_device<GPUDevice>(), Abar, Lbar);
 
             // Allocate scratch space (blocksize)
@@ -221,9 +229,58 @@ public:
             TensorShape tmp_shape({ blocksize, blocksize });
             ctx->allocate_temp(DataTypeToEnum<T>::value, tmp_shape, &scratchtensor);
             T* scratchptr = scratchtensor.flat<T>().data();
-            Matrix<T> scratch{ scratchptr, 0, blocksize, blocksize, blocksize };
 
-            CholeskyGradSymbolic(ctx, L, Lbar, Abar);
+            T one = 1.0;
+            T zero = 0.0;
+            for( int k = M; k > 0; k -= blocksize)
+            {
+                int j = std::max(0, k - blocksize);
+                L3Par<const T> par{L, j, k};
+                L3Par<T> parbar{Abar, j, k};
+                Matrix<const T> cAbar{Abar.dataptr, 0, Abar.m, Abar.n, Abar.ld};
+                L3Par<const T> cparbar{cAbar, j, k};
+
+                if (nz(par.D) && nz(parbar.C)) {
+                    // std::cout << "solve_tri\n"; 
+                    trsm(stream, 'R', 'L', false, one, par.D, parbar.C);
+                }
+                if (nz(parbar.C) && nz(par.R) && nz(parbar.B)) {
+                    // Bbar <- Bbar - Cbar * R
+                    gemm(stream, false, false, -one, cparbar.C, par.R, one, parbar.B);
+                }
+                if (nz(parbar.D) && nz(parbar.C) && nz(par.C)){
+                    // these next two lines same as Dbar <- Dbar - tril(Cbar' * C)
+                    // Dbar <- Dbar - Cbar' * C
+                    gemm(stream, true, false, -one, cparbar.C, par.C, one, parbar.D);
+                    // tril(parbar.D); 
+                    Helper::tril(ctx->eigen_device<GPUDevice>(), parbar.D);
+                }
+
+                // Copy Dbar into pre-allocated scratch memory. 
+                // CholeskyGradSymbolic expects (L, Lbar, P) and stores results in P
+                // Therefore call as: CholeskyGradSymbolic(D, DbarCopy, Dbar);
+                int dsize = k - j;
+                if (nz(par.D)) {
+                    Matrix<T> DbarCopy{scratchptr, 0, dsize, dsize, dsize};
+                    Helper::copy(ctx->eigen_device<GPUDevice>(), DbarCopy, cparbar.D);
+                    Matrix<const T> cDbarCopy{scratchptr, 0, dsize, dsize, dsize};
+                    CholeskyGradSymbolic(ctx, par.D, cDbarCopy, parbar.D);
+
+                }
+
+                if (nz(parbar.C) && nz(par.B) && nz(parbar.R)) {
+                    // Rbar <- Rbar - Cbar' * B
+                    // std::cout << "Cbar' * B\n";
+                    // gemm(-1.0f, parbar.C, CUBLAS_OP_T, par.B, CUBLAS_OP_N, 1.0f, parbar.R);
+                    gemm(stream, true, false, -one, cparbar.C, par.B, one, parbar.R);
+                }
+                if (nz(parbar.D) && nz(par.R) && nz(parbar.R)) {
+                    // Rbar <- Rbar - Dbar * R
+                    gemm(stream, false, false, -one, cparbar.D, par.R, one, parbar.R); 
+                    // Rbar <- Rbar - Dbar' * R
+                    gemm(stream, true, false, -one, cparbar.D, par.R, one, parbar.R); 
+                }
+            }
             ctx->op_device_context()->stream()->BlockHostUntilDone();
         }
         void CholeskyGradSymbolic(OpKernelContext* ctx, Matrix<const T>& L, Matrix<const T>& Lbar, Matrix<T>& Abar)
@@ -234,17 +291,13 @@ public:
             T zero = 0.0;
             // Abar <- L^T Lbar
             gemm(stream, true, false, one, L, Lbar, zero, Abar);
-            // stream->ok();
             // P <- Phi(L^T Lbar) + Phi(L^T Lbar)^T
             Helper::symmetrise(ctx->eigen_device<GPUDevice>(), Abar);
-            // stream->ok();
-            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T)
+            // P <- L^-T(Phi(L^T Lbar) + Phi(L^T Lbar)^T)
             trsm(stream, 'L', 'L', true, one, L, Abar);
-            // stream->ok();
-            // P <- L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1
+            // P <- L^-T(Phi(L^T Lbar) + Phi(L^T Lbar)^T) L^-1
             trsm(stream, 'R', 'L', false, one, L, Abar);
-            // stream->ok();
-            // P <- Phi(L^-T(Phi(L^-T Lbar) + Phi(L^-T Lbar)^T) L^-1)
+            // P <- Phi(L^-T(Phi(L^T Lbar) + Phi(L^T Lbar)^T) L^-1)
             Helper::phi(ctx->eigen_device<GPUDevice>(), Abar);
         }
     };

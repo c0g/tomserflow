@@ -54,8 +54,14 @@ namespace tensorflow {
     template <typename T>
     struct CholgradHelper<GPUDevice, T> {
         static void copy(const GPUDevice& d, Matrix<T> dst, Matrix<const T> src) {
-            cudaMemcpyAsync(dst.data(), src.data(), src.m * src.n * sizeof(T),
-                cudaMemcpyDeviceToDevice, d.stream());
+            // cudaMemcpyAsync(dst.data(), src.data(), src.m * src.n * sizeof(T),
+            //     cudaMemcpyDeviceToDevice, d.stream());
+            cudaMemcpy2DAsync(dst.data(),
+                        sizeof(T) * dst.m,
+                        src.data(), 
+                        sizeof(T) * src.ld,
+                        sizeof(T) * src.m, src.n,
+                        cudaMemcpyDeviceToDevice, d.stream());
         }
         static void symmetrise(const GPUDevice& d, Matrix<T> mat) {
         	dim3 blocksize(16, 16);

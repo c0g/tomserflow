@@ -2,7 +2,7 @@
 #include "tensorflow/core/framework/tensor.h"
 namespace tensorflow {
 
-	     template <typename T>
+	    template <typename T>
         struct Matrix {
             T* dataptr;
             int offset; // offset into parent
@@ -26,16 +26,15 @@ namespace tensorflow {
             Matrix<T> D;
             Matrix<T> B;
             Matrix<T> C;
-            L3Par(Matrix<T>& parent, int j, int k);
+            L3Par(Matrix<T>& parent, int j, int k)
+            {
+                R = parent.view(j, k, 0, j);
+                D = parent.view(j, k, j, k);
+                B = parent.view(k, -1, 0, j);
+                C = parent.view(k, -1, j, k);
+            }
         };
-        template <typename T>
-        L3Par<T>::L3Par(Matrix<T>& parent, int j, int k)
-        {
-            R = parent.view(j, k, 0, j);
-            D = parent.view(j, k, j, k);
-            B = parent.view(k, -1, 0, j);
-            C = parent.view(k, -1, j, k);
-        }
+
         template <typename Device, typename T>
         struct CholgradHelper {
         	static void copy(const Device& d, Matrix<T> dst, Matrix<const T>);
