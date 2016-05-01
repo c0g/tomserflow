@@ -41,5 +41,6 @@ namespace tensorflow {
             static void symmetrise(const Device&, Matrix<T>);
             static void phi(const Device&, Matrix<T>);
             static void tril(const Device&, Matrix<T>);
+            static void reflect_half(const Device&, Matrix<T>);
         };
 }

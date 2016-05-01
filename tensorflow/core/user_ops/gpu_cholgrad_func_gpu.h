@@ -21,6 +21,19 @@ namespace tensorflow {
 		        }
 		    }
 		}
+		// Halves non-diagonal elements
+		template <typename T>
+		__global__ void cu_half_nd(T* data, int m, int ld)
+		{
+		    int r = blockDim.y * blockIdx.y + threadIdx.y;
+		    int c = blockDim.x * blockIdx.x + threadIdx.x;
+		    if ((c < m) && (r < m)) {
+		        if (r != c) {
+		            int idx = c * ld + r;
+		            data[idx] *= 0.5;
+		        }
+		    }
+		}
 		// Zeros upper triangle (above diagonal)
 		template <typename T>
 		__global__ void cu_tril(T* data, int m, int ld)
@@ -78,6 +91,12 @@ namespace tensorflow {
 		    int blocksize = 256;
 		    int nblocks = mat.m / 256 + 1;
 		    cu_half_d<<<nblocks, blocksize, 0, d.stream()>>>(mat.data(), mat.m, mat.ld);
+        }
+        static void reflect_half(const GPUDevice& d, Matrix<T> mat) {
+        	dim3 blocksize(16, 16);
+		    dim3 nblocks(mat.m / 16 + 1, mat.n / 16 + 1);
+		    cu_symmetrise<<<nblocks, blocksize, 0, d.stream()>>>(mat.data(), mat.m, mat.ld);
+		    cu_half_nd<<<nblocks, blocksize, 0, d.stream()>>>(mat.data(), mat.m, mat.ld);
         }
     };
 } // tensorflow
