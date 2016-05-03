@@ -27,6 +27,8 @@ const PluginId kNullPlugin = nullptr;
 // Returns the string representation of the specified PluginKind.
 string PluginKindString(PluginKind plugin_kind) {
   switch (plugin_kind) {
+    case PluginKind::kSolver:
+      return "SOLVER";
     case PluginKind::kBlas:
       return "BLAS";
     case PluginKind::kDnn:
@@ -42,7 +44,7 @@ string PluginKindString(PluginKind plugin_kind) {
 }
 
 PluginRegistry::DefaultFactories::DefaultFactories() :
-    blas(kNullPlugin), dnn(kNullPlugin), fft(kNullPlugin), rng(kNullPlugin) { }
+    solver(kNullPlugin), blas(kNullPlugin), dnn(kNullPlugin), fft(kNullPlugin), rng(kNullPlugin) { }
 
 /* static */ mutex PluginRegistry::mu_(LINKER_INITIALIZED);
 /* static */ PluginRegistry* PluginRegistry::instance_ = nullptr;
@@ -118,6 +120,9 @@ bool PluginRegistry::SetDefaultFactory(Platform::Id platform_id,
   }
 
   switch (plugin_kind) {
+    case PluginKind::kSolver:
+      default_factories_[platform_id].solver = plugin_id;
+      break;
     case PluginKind::kBlas:
       default_factories_[platform_id].blas = plugin_id;
       break;
@@ -143,6 +148,8 @@ bool PluginRegistry::HasFactory(const PluginFactories& factories,
                                 PluginKind plugin_kind,
                                 PluginId plugin_id) const {
   switch (plugin_kind) {
+    case PluginKind::kSolver:
+      return factories.solver.find(plugin_id) != factories.solver.end();
     case PluginKind::kBlas:
       return factories.blas.find(plugin_id) != factories.blas.end();
     case PluginKind::kDnn:
@@ -235,6 +242,7 @@ bool PluginRegistry::HasFactory(Platform::Id platform_id,
     return GetFactory<PluginRegistry::FACTORY_TYPE>(iter->second, plugin_id); \
   }
 
+EMIT_PLUGIN_SPECIALIZATIONS(SolverFactory, solver, "SOLVER");
 EMIT_PLUGIN_SPECIALIZATIONS(BlasFactory, blas, "BLAS");
 EMIT_PLUGIN_SPECIALIZATIONS(DnnFactory, dnn, "DNN");
 EMIT_PLUGIN_SPECIALIZATIONS(FftFactory, fft, "FFT");

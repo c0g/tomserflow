@@ -671,6 +671,20 @@ bool CUDAExecutor::BlockHostUntilDone(Stream *stream) {
   return CUDADriver::SynchronizeStream(context_, AsCUDAStreamValue(stream));
 }
 
+solver::SolverSupport *CUDAExecutor::CreateSolver() {
+  PluginRegistry *registry = PluginRegistry::Instance();
+  port::StatusOr<PluginRegistry::SolverFactory> status =
+      registry->GetFactory<PluginRegistry::SolverFactory>(kCudaPlatformId,
+                                                        plugin_config_.solver());
+  if (!status.ok()) {
+    LOG(ERROR) << "Unable to retrieve SOLVER factory: "
+               << status.status().error_message();
+    return nullptr;
+  }
+
+  return status.ValueOrDie()(this);
+}
+
 blas::BlasSupport *CUDAExecutor::CreateBlas() {
   PluginRegistry *registry = PluginRegistry::Instance();
   port::StatusOr<PluginRegistry::BlasFactory> status =
@@ -842,6 +856,8 @@ KernelArg CUDAExecutor::DeviceMemoryToKernelArg(
   kernel_arg.bytes = sizeof(arg);
   return kernel_arg;
 }
+
+bool CUDAExecutor::SupportsSolver() const { return true; }
 
 bool CUDAExecutor::SupportsBlas() const { return true; }
 

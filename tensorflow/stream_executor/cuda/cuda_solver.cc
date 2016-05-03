@@ -68,17 +68,16 @@ namespace dynload {
   } __name;                                                                 \
   const char *DynLoadShim__##__name::kName = #__name;
 
-#define PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(__name) \
-  PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(__name)
-
 #define CUSOLVER_SOLVER_ROUTINE_EACH(__macro) \
-  __macro(cusolverDnDpotrf)               \
-  __macro(cusolverDnSpotrf)
+  __macro(cusolverDnDpotrf)                   \
+  __macro(cusolverDnSpotrf)                   \
+  __macro(cusolverDnSpotrf_bufferSize)        \
+  __macro(cusolverDnDpotrf_bufferSize)        \
+  __macro(cusolverDnCreate)                   \
+  __macro(cusolverDnDestroy)                  \
+  __macro(cusolverDnSetStream)                \
+  __macro(cusolverDnGetStream)                
 
-PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(cusolverDnCreate)
-PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(cusolverDnDestroy)
-PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(cusolverDnSetStream)
-PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP(cusolverDnGetStream)
 CUSOLVER_SOLVER_ROUTINE_EACH(PERFTOOLS_GPUTOOLS_CUSOLVER_WRAP)
 
 }  // namespace dynload
@@ -201,7 +200,7 @@ bool CUDASolver::DoSolverInternal(FuncT cusolver_func, Stream *stream,
     return false;
   }
 
-  cusolverDnStatus_t ret = cusolver_func(parent_, solver_, args...);
+  cusolverStatus_t ret = cusolver_func(parent_, solver_, args...);
   if (ret != CUSOLVER_STATUS_SUCCESS) {
     LOG(ERROR) << "failed to run cuSolver routine " << cusolver_func.kName << ": "
                << ToString(ret);
@@ -211,53 +210,66 @@ bool CUDASolver::DoSolverInternal(FuncT cusolver_func, Stream *stream,
   return true;
 }
 
-bool CUDASolver::DoSolverPotrf(Stream *stream, uint64 elem_count, solver::UpperLower uplo,
-                          DeviceMemory<float> *A, uint64t lda,
+template <typename FuncT1, typename FuncT2, typename T>
+port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
+                          FuncT1 size_func, FuncT2 solve_func,
+                          Stream *stream,
+                          solver::UpperLower uplo, uint64 elem_count, 
+                          DeviceMemory<T> *A, uint64 lda,
                           ScratchAllocator *scratch_allocator) {
 
-  int Lwork;
-  if (!DoSolverInternal(dynload::cusolverDnSpotrf_bufferSize, stream,
-                      elem_count, CudaSolverUpperLower(uplo),
+  int Lwork; // must be int: cusolver expect int point
+  if (!DoSolverInternal(size_func, stream,
+                      CUDASolverUpperLower(uplo), elem_count,
                       CUDAMemoryMutable(A), lda, 
                       &Lwork)) {
-    return false;
+    return port::Status(port::error::INTERNAL,
+                    "failed SOLVER call to calculate scratch space.");
   }
-  DeviceMemory<float> scratch;
-  std::unique_ptr<TemporaryDeviceMemory<float>> scratch_temporary;
+  DeviceMemory<T> scratch;
+  std::unique_ptr<TemporaryDeviceMemory<T>> scratch_temp;
+
+  uint64 size = sizeof(T) * Lwork;
   if (scratch_allocator != nullptr) {
-    scratch = scratch_allocator->AllocateBytes(stream, sizeof(float) * Lwork).ValueOrDie();
+    SE_ASSIGN_OR_RETURN(DeviceMemory<uint8> bytes,
+                        scratch_allocator->AllocateBytes(stream, size));
+    scratch = DeviceMemory<T>(bytes);
   } else {
-    SE_ASSIGN_OR_RETURN(scratch_temporary,
-                        stream->AllocateTemporaryArray<float>(Lwork));
-    scratch = DeviceMemory<float>(*scratch_temporary->mutable_device_memory());
+    SE_ASSIGN_OR_RETURN(scratch_temp,
+                        stream->AllocateTemporaryArray<T>(Lwork));
+    scratch = DeviceMemory<T>(*scratch_temp->mutable_device_memory());
   }
-  return DoSolverInternal(dynload::cusolverDnSpotrf, stream,
-                        elem_count, CudaSolverUpperLower(uplo),
+  int info; // must be int: cusolver expects int pointer
+  bool ok = DoSolverInternal(solve_func, stream,
+                        CUDASolverUpperLower(uplo), elem_count,
                         CUDAMemoryMutable(A), lda,
-                        Lwork, CUDAMemoryMutable(scratch));
+                        CUDAMemoryMutable(&scratch), Lwork, &info);
+  if (info != CUSOLVER_STATUS_SUCCESS) {
+    //TODO: log the failure
+    return port::Status(port::error::INTERNAL,
+              "failed SOLVER call, see log for details");
+  }
+  if (ok) {
+    return port::Status::OK();
+  }
+  return port::Status(port::error::INTERNAL,
+                      "failed SOLVER call, see log for details");
 } 
-bool CUDASolver::DoSolverPotrf(Stream *stream, uint64 elem_count, solver::UpperLower uplo,
+bool CUDASolver::DoSolverPotrf(Stream *stream, 
+                          solver::UpperLower uplo, uint64 elem_count,
+                          DeviceMemory<float> *A, uint64 lda,
+                          ScratchAllocator *scratch_allocator) {
+  SE_RETURN_STATUS_AS_BOOL(DoSolverPotrfWithScratchInternal(
+      dynload::cusolverDnSpotrf_bufferSize, dynload::cusolverDnSpotrf,
+      stream, uplo, elem_count, A, lda, scratch_allocator));
+}
+bool CUDASolver::DoSolverPotrf(Stream *stream, 
+                          solver::UpperLower uplo, uint64 elem_count,
                           DeviceMemory<double> *A, uint64 lda,
                           ScratchAllocator *scratch_allocator) {
-  int Lwork;
-  if (!DoSolverInternal(dynload::cusolverDnDpotrf_bufferSize, stream,
-                      elem_count, CudaSolverUpperLower(uplo),
-                      CUDAMemoryMutable(A), lda, 
-                      &Lwork)) {
-    return false;
-  }
-  DeviceMemory<double> scratch;
-  if (scratch_allocator != nullptr) {
-    scratch = scratch_allocator->AllocateBytes(stream, sizeof(double) * Lwork).ValueOrDie();
-  } else {
-    SE_ASSIGN_OR_RETURN(scratch_temporary,
-                        stream->AllocateTemporaryArray<double>(Lwork));
-    scratch = DeviceMemory<double>(*scratch_temporary->mutable_device_memory());
-  }
-  return DoSolverInternal(dynload::cusolverDnDpotrf, stream,
-                        elem_count, CudaSolverUpperLower(uplo),
-                        CUDAMemoryMutable(A), lda,
-                        Lwork, CUDAMemoryMutable(scratch));
+  SE_RETURN_STATUS_AS_BOOL(DoSolverPotrfWithScratchInternal(
+      dynload::cusolverDnDpotrf_bufferSize, dynload::cusolverDnDpotrf,
+      stream, uplo, elem_count, A, lda, scratch_allocator));
 }
 
 }  // namespace cuda
@@ -282,7 +294,7 @@ void initialize_cusolver() {
 
                 gpu::cuda::CUDASolver *solver =
                     new gpu::cuda::CUDASolver(cuda_executor);
-                if (!solver_->Init()) {
+                if (!solver->Init()) {
                   // Note: Init() will log a more specific error.
                   delete solver;
                   return nullptr;

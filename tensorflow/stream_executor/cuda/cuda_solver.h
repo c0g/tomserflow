@@ -27,7 +27,7 @@ limitations under the License.
 #include "tensorflow/stream_executor/platform/thread_annotations.h"
 #include "tensorflow/stream_executor/plugin_registry.h"
 
-typedef struct cuSolverDnContext *cusolverDnHandle_t;
+typedef struct cusolverDnContext *cusolverDnHandle_t;
 
 namespace perftools {
 namespace gputools {
@@ -37,7 +37,7 @@ class Stream;
 namespace cuda {
 
 // Opaque and unique identifier for the cuSolverDn plugin.
-extern const PluginId kCuSolverDNPlugin;
+extern const PluginId kCuSolverDnPlugin;
 
 class CUDAExecutor;
 
@@ -81,8 +81,17 @@ class CUDASolver : public solver::SolverSupport {
   //                     (true) or device (false).
   // args:               Arguments of cuSolverDn function.
   template <typename FuncT, typename... Args>
-  bool DoSolverInternal(FuncT cusolver_func, Stream *stream, bool pointer_mode_host,
+  bool DoSolverInternal(FuncT cusolver_func, Stream *stream,
                       Args... args);
+
+  // A helper function to implement DoBlasGemmBatched interfaces for generic
+  // types.
+  template <typename FuncT1, typename FuncT2, typename T>
+  port::Status DoSolverPotrfWithScratchInternal(
+      FuncT1 size_func, FuncT2 alloc_func, Stream *stream, 
+      solver::UpperLower uplo, uint64 elem_count,
+      DeviceMemory<T> *A, uint64 lda,
+      ScratchAllocator *scratch_allocator);
 
 
   // mutex that guards the cuSolverDn handle for this device.
@@ -92,7 +101,7 @@ class CUDASolver : public solver::SolverSupport {
   // Immutable post-initialization.
   CUDAExecutor *parent_;
 
-  // cuSolverDn library handle on the device.
+  // cuSolver library handle on the device.
   cusolverDnHandle_t solver_ GUARDED_BY(mu_);
 
   SE_DISALLOW_COPY_AND_ASSIGN(CUDASolver);

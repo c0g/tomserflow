@@ -885,18 +885,19 @@ Stream &ThenSolverImpl<Args...>::operator()(
   return *stream;
 }
 
-Stream &Stream::ThenSolverPotrfWithScratch(uint64 elem_count, solver::UpperLower uplo,
+Stream &Stream::ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
                       DeviceMemory<float>* A, uint64 lda,
                       ScratchAllocator* scratch_allocator) {
-  VLOG_CALL(PARAM(elem_count), PARAM(uplo), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
-  ThenSolverImpl<uint64, solver::UpperLower, DeviceMemory<float> *, uint64, 
+  VLOG_CALL(PARAM(uplo), PARAM(elem_count), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
+  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<float> *, uint64, 
       ScratchAllocator*> impl;
-  return impl(this, &solver::SolverSupport::DoSolverPotrf, elem_count, uplo,
+  return impl(this, &solver::SolverSupport::DoSolverPotrf, uplo, elem_count,
     A, lda, scratch_allocator);
 }
-Stream &Stream::ThenSolverPotrf(uint64 elem_count, solver::UpperLower uplo,
+
+Stream &Stream::ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count, 
                       DeviceMemory<float>* A, uint64 lda) {
-  ThenSolverPotrfWithScratch(elem_count, uplo, A, lda, nullptr);
+  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, nullptr);
 }
 
 // A functor that implements ThenBlasXXX interfaces, which calls DoBlasXXX

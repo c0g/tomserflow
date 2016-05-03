@@ -43,6 +43,7 @@ namespace perftools {
 namespace gputools {
 
 namespace host {
+class HostStream;
 class HostBlas;
 class HostFft;
 class HostRng;
@@ -382,10 +383,10 @@ class Stream {
 
   /////////////////
   // SOLVER support
-  Stream &ThenSolverPotrfWithScratch(uint64 elem_count, solver::UpperLower uplo,
+  Stream &ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
                       DeviceMemory<float>* A, uint64 lda,
                       ScratchAllocator* scratch_allocator); 
-  Stream &ThenSolverPotrf(uint64 elem_count, solver::UpperLower uplo,
+  Stream &ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count,
                       DeviceMemory<float>* A, uint64 lda); 
 
   /////////////////
@@ -1293,11 +1294,14 @@ class Stream {
   internal::TemporaryMemoryManager *temporary_memory_manager();
 
  private:
+  friend class host::HostStream; // for parent_.
   friend class host::HostBlas;  // for parent_.
   friend class host::HostFft;   // for parent_.
   friend class host::HostRng;   // for parent_.
   template <typename... Args>
   friend struct ThenBlasImpl;  // for implementing ThenBlasXXX.
+  template <typename... Args>
+  friend struct ThenSolverImpl;  // for implementing ThenBlasXXX.
   friend class ocl::CLBlas;    // for parent_.
 
   bool InErrorState() const {

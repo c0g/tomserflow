@@ -53,12 +53,13 @@ limitations under the License.
 //  - Platform name lookup is case-insensitive. "OpenCL" or "opencl" (or even
 //    ("OpEnCl") would work correctly in the above example.
 //
-// And similarly, for standard interfaces (BLAS, RNG, etc.) you can add
+// And similarly, for standard interfaces (SOLVER, BLAS, RNG, etc.) you can add
 // dependencies on support libraries, e.g.:
 //
 //    //perftools/gputools/executor/cuda:pluton_blas_plugin
 //    //perftools/gputools/executor/cuda:cudnn_plugin
 //    //perftools/gputools/executor/cuda:cublas_plugin
+//    //perftools/gputools/executor/cuda:cusolver_plugin
 //    //perftools/gputools/executor/cuda:curand_plugin
 
 #ifndef TENSORFLOW_STREAM_EXECUTOR_MULTI_PLATFORM_MANAGER_H_

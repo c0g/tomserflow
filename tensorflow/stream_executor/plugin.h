@@ -37,6 +37,7 @@ extern const PluginId kNullPlugin;
 // Enumeration to list the supported types of plugins / support libraries.
 enum class PluginKind {
   kInvalid,
+  kSolver,
   kBlas,
   kDnn,
   kFft,
@@ -48,7 +49,7 @@ enum class PluginKind {
 // to the address static member in the implementation (to avoid conflicts).
 //
 // A PluginConfig may be passed to the StreamExecutor constructor - the plugins
-// described therein will be used to provide BLAS, DNN, FFT, and RNG
+// described therein will be used to provide SOLVER, BLAS, DNN, FFT, and RNG
 // functionality. Platform-approprate defaults will be used for any un-set
 // libraries. If a platform does not support a specified plugin (ex. cuBLAS on
 // an OpenCL executor), then an error will be logged and no plugin operations
@@ -69,18 +70,20 @@ class PluginConfig {
   bool operator==(const PluginConfig& rhs) const;
 
   // Sets the appropriate library kind to that passed in.
+  PluginConfig& SetSolver(PluginId solver);
   PluginConfig& SetBlas(PluginId blas);
   PluginConfig& SetDnn(PluginId dnn);
   PluginConfig& SetFft(PluginId fft);
   PluginConfig& SetRng(PluginId rng);
 
+  PluginId solver() const { return solver_; }
   PluginId blas() const { return blas_; }
   PluginId dnn() const { return dnn_; }
   PluginId fft() const { return fft_; }
   PluginId rng() const { return rng_; }
 
  private:
-  PluginId blas_, dnn_, fft_, rng_;
+  PluginId solver_, blas_, dnn_, fft_, rng_;
 };
 
 }  // namespace gputools

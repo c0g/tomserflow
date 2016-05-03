@@ -40,6 +40,9 @@ namespace gputools {
 namespace blas {
 class BlasSupport;
 }
+namespace solver {
+  class SolverSupport;
+}
 namespace internal {
 class RngSupport;
 }  // namespace internal
@@ -186,6 +189,10 @@ class CUDAExecutor : public internal::StreamExecutorInterface {
 
   KernelArg DeviceMemoryToKernelArg(
       const DeviceMemoryBase &gpu_mem) const override;
+
+  bool SupportsSolver() const override;
+
+  solver::SolverSupport *CreateSolver() override;
 
   bool SupportsBlas() const override;
 
