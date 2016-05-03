@@ -4,7 +4,7 @@
 #define EIGEN_USE_GPU
 
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-#include "tensorflow/core/user_ops/triangle_func_gpu.h"
+#include "tensorflow/core/user_ops/triangle_gpu.h"
 namespace tensorflow {
 typedef Eigen::GpuDevice GPUDevice;
 

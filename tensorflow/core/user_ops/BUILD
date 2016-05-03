@@ -2,25 +2,24 @@ load("//tensorflow:tensorflow.bzl", "tf_custom_op_library")
 
 tf_custom_op_library(
     name = "get_diag.so",
-    srcs = ["get_diag.cc"],
-    gpu_srcs = ["get_diag.cu.cc"],
+    srcs = ["get_diag.cc", "get_diag.h"],
+    gpu_srcs = ["get_diag.cu.cc", "get_diag.h", "get_diag_gpu.h"]
+)
+
+tf_custom_op_library(
+    name = "triangle.so",
+    srcs = ["triangle.cc", "triangle_func.h", "triangle_func_cpu.h"],
+    gpu_srcs = ["triangle.cu.cc", "triangle_func.h", "triangle_func_gpu.h"]
+)
+
+tf_custom_op_library(
+    name = "gpu_cholgrad.so",
+    srcs = ["gpu_cholgrad.cc", "gpu_cholgrad_func.h"],
+    gpu_srcs = ["gpu_cholgrad.cu.cc", "gpu_cholgrad_func.h", "gpu_cholgrad_func_gpu.h"]
 )
 
 tf_custom_op_library(
     name = "gpu_cholesky.so",
-    srcs = ["gpu_cholesky.cc", '/usr/local/cuda-7.5/lib64/libcusolver.so'],
-    gpu_srcs = ["gpu_cholesky.cu.cc"],
+    srcs = ["gpu_cholesky.cc", "gpu_cholesky_func.h", "linalg_ops_common.h"],
+    gpu_srcs = ["gpu_cholesky.cu.cc", "gpu_cholesky_func.h", "gpu_cholesky_func_gpu.h"],
 )
-
-tf_custom_op_library(
-    name = "get_diag.so",
-    srcs = ["get_diag.cc"],
-    gpu_srcs = ["get_diag.cu.cc"],
-)
-
-tf_custom_op_library(
-    name = "get_diag.so",
-    srcs = ["get_diag.cc"],
-    gpu_srcs = ["get_diag.cu.cc"],
-)
-

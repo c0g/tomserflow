@@ -5,16 +5,16 @@
 #include "tensorflow/core/framework/op_kernel.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor_types.h"
-#include "get_diag_func.h"
-#include "get_diag_func_cpu.h"
+#include "get_diag.h"
 
 
 REGISTER_OP("GetDiag").Input("l: T").Output("g: T").Attr("T : {float, double}").Doc("Get diagonal of a square matrix.");
 
-using namespace tensorflow;
+
 typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
+namespace tensorflow {
 template <typename Device, typename T>
 class GetDiag : public OpKernel {
     public:
@@ -65,3 +65,4 @@ REGISTER_KERNEL_BUILDER(
     .Device(DEVICE_GPU)
     .TypeConstraint<double>("T"),
     GetDiag<GPUDevice, double>);
+}//namespace tensorflow

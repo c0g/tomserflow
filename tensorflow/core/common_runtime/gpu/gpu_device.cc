@@ -505,7 +505,7 @@ void BaseGPUDevice::ReinitializeDevice(OpKernelContext* context,
                                        PerOpGpuDevice* device, int stream_id,
                                        Allocator* allocator) {
   ConcretePerOpGpuDevice* concrete_device =
-      dynamic_cast<ConcretePerOpGpuDevice*>(device);
+      static_cast<ConcretePerOpGpuDevice*>(device);
   DCHECK(concrete_device);
 #if defined(__GCUDACC__) || defined(__GCUDACC_HOST__)
   concrete_device->Reinitialize(context, streams_[stream_id].compute, allocator,
@@ -689,6 +689,7 @@ struct CudaVersion {
 
 // "configure" uses the specific name to substitute the following string.
 // If you change it, make sure you modify "configure" as well.
+// Unofficial setting. DO NOT SUBMIT!!!
 // Unofficial setting. DO NOT SUBMIT!!!
 // Unofficial setting. DO NOT SUBMIT!!!
 std::vector<CudaVersion> supported_cuda_compute_capabilities = {CudaVersion("3.0"), CudaVersion("3.5"), CudaVersion("5.2"),};
