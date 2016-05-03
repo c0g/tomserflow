@@ -307,7 +307,7 @@ namespace functors {
 
     template <typename T>
     struct ComputeCholGrad<GPUDevice, T> {
-        const int blocksize = 16;
+        const int blocksize = 256;
         using Helper = CholgradHelper<GPUDevice, T>;
         void operator()(OpKernelContext* ctx, const Tensor& Ltensor, const Tensor& Ltensorbar, Tensor* Atensorbar)
         {
