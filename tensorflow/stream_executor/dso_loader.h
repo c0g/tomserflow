@@ -43,6 +43,7 @@ class DsoLoader {
   // handle or error status in the canonical namespace.
 
   static port::Status GetCublasDsoHandle(void** dso_handle);
+  static port::Status GetCusolverDsoHandle(void** dso_handle);
   static port::Status GetCudnnDsoHandle(void** dso_handle);
   static port::Status GetCufftDsoHandle(void** dso_handle);
   static port::Status GetCurandDsoHandle(void** dso_handle);
@@ -105,6 +106,7 @@ class CachedDsoLoader {
  public:
   // Cached versions of the corresponding DsoLoader methods above.
   static port::StatusOr<void*> GetCublasDsoHandle();
+  static port::StatusOr<void*> GetCusolverDsoHandle();
   static port::StatusOr<void*> GetCudnnDsoHandle();
   static port::StatusOr<void*> GetCufftDsoHandle();
   static port::StatusOr<void*> GetCurandDsoHandle();

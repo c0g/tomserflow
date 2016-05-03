@@ -90,6 +90,19 @@ cc_library(
 )
 
 cc_library(
+    name = "cusolver",
+    srcs = [
+        cuda_library_path("cusolver")
+    ],
+    data = [
+        cuda_library_path("cusolver")
+    ],
+    includes = ["include/"],
+    visibility = ["//visibility:public"],
+    linkstatic = 1,
+)
+
+cc_library(
     name = "cudnn",
     srcs = [
         cudnn_library_path()
@@ -121,6 +134,7 @@ cc_library(
         ":cuda_headers",
         ":cudart",
         ":cublas",
+        ":cusolver",
         ":cudnn",
         ":cufft",
     ],
@@ -159,10 +173,12 @@ genrule(
     outs = [
         "include/cuda.h",
         "include/cublas.h",
+        "include/cusolverDn.h",
         "include/cudnn.h",
         "extras/CUPTI/include/cupti.h",
         cuda_static_library_path("cudart"),
         cuda_library_path("cublas"),
+        cuda_library_path("cusolver"),
         cudnn_library_path(),
         cuda_library_path("cudart"),
         cuda_library_path("cufft"),
@@ -180,10 +196,12 @@ genrule(
            "mkdir -p $(@D)/extras/CUPTI/lib64",
            "touch $(@D)/include/cuda.h",
            "touch $(@D)/include/cublas.h",
+           "touch $(@D)/include/cusolver.h",
            "touch $(@D)/include/cudnn.h",
            "touch $(@D)/extras/CUPTI/include/cupti.h",
            "touch $(@D)/{}".format(cuda_static_library_path("cudart")),
            "touch $(@D)/{}".format(cuda_library_path("cublas")),
+           "touch $(@D)/{}".format(cuda_library_path("cusolver")),
            "touch $(@D)/{}".format(cudnn_library_path()),
            "touch $(@D)/{}".format(cuda_library_path("cudart")),
            "touch $(@D)/{}".format(cuda_library_path("cufft")),

@@ -124,6 +124,7 @@ if [ "$OSNAME" == "Linux" ]; then
   CUDA_RT_LIB_PATH="lib64/libcudart.so${TF_CUDA_EXT}"
   CUDA_RT_LIB_STATIC_PATH="lib64/libcudart_static.a"
   CUDA_BLAS_LIB_PATH="lib64/libcublas.so${TF_CUDA_EXT}"
+  CUDA_SOLVER_LIB_PATH="lib64/libcusolver.so${TF_CUDA_EXT}"
   CUDA_DNN_LIB_PATH="lib64/libcudnn.so${TF_CUDNN_EXT}"
   CUDA_DNN_LIB_ALT_PATH="libcudnn.so${TF_CUDNN_EXT}"
   CUDA_FFT_LIB_PATH="lib64/libcufft.so${TF_CUDA_EXT}"
@@ -135,6 +136,7 @@ elif [ "$OSNAME" == "Darwin" ]; then
   CUDA_RT_LIB_PATH="lib/libcudart${TF_CUDA_EXT}.dylib"
   CUDA_RT_LIB_STATIC_PATH="lib/libcudart_static.a"
   CUDA_BLAS_LIB_PATH="lib/libcublas${TF_CUDA_EXT}.dylib"
+  CUDA_SOLVER_LIB_PATH="lib/libcusolver${TF_CUDA_EXT}.dylib"
   CUDA_DNN_LIB_PATH="lib/libcudnn${TF_CUDNN_EXT}.dylib"
   CUDA_DNN_LIB_ALT_PATH="libcudnn${TF_CUDNN_EXT}.dylib"
   CUDA_FFT_LIB_PATH="lib/libcufft${TF_CUDA_EXT}.dylib"
@@ -145,10 +147,12 @@ fi
 if [ "$CHECK_ONLY" == "1" ]; then
   CheckAndLinkToSrcTree CudaError include/cuda.h
   CheckAndLinkToSrcTree CudaError include/cublas.h
+  CheckAndLinkToSrcTree CudaError include/cusolverDn.h
   CheckAndLinkToSrcTree CudnnError include/cudnn.h
   CheckAndLinkToSrcTree CudaError extras/CUPTI/include/cupti.h
   CheckAndLinkToSrcTree CudaError $CUDA_RT_LIB_STATIC_PATH
   CheckAndLinkToSrcTree CudaError $CUDA_BLAS_LIB_PATH
+  CheckAndLinkToSrcTree CudaError $CUDA_SOLVER_LIB_PATH
   CheckAndLinkToSrcTree CudnnError $CUDA_DNN_LIB_PATH
   CheckAndLinkToSrcTree CudaError $CUDA_RT_LIB_PATH
   CheckAndLinkToSrcTree CudaError $CUDA_FFT_LIB_PATH

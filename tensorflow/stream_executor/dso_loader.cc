@@ -48,6 +48,11 @@ string GetCudnnVersion() { return ""; }
                                   GetCudaLibraryDirPath()),
                       dso_handle);
 }
+/* static */ port::Status DsoLoader::GetCusolverDsoHandle(void** dso_handle) {
+  return GetDsoHandle(FindDsoPath(tensorflow::internal::FormatLibraryFileName("cusolver", GetCudaVersion()),
+                                  GetCudaLibraryDirPath()),
+                      dso_handle);
+}
 
 /* static */ port::Status DsoLoader::GetCudnnDsoHandle(void** dso_handle) {
   // libcudnn is versioned differently than the other libraries and may have a
@@ -219,6 +224,12 @@ static std::vector<string>* CreatePrimordialRpaths() {
 /* static */ port::StatusOr<void*> CachedDsoLoader::GetCublasDsoHandle() {
   static port::StatusOr<void*> result =
       FetchHandleResult(DsoLoader::GetCublasDsoHandle);
+  return result;
+}
+
+/* static */ port::StatusOr<void*> CachedDsoLoader::GetCusolverDsoHandle() {
+  static port::StatusOr<void*> result =
+      FetchHandleResult(DsoLoader::GetCusolverDsoHandle);
   return result;
 }
 
