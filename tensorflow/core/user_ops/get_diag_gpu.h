@@ -1,5 +1,5 @@
 #pragma once
-#include "tensorflow/core/user_ops/get_diag_func.h"
+#include "tensorflow/core/user_ops/get_diag.h"
 #include "tensorflow/core/framework/tensor_types.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/user_ops/gpu_cholgrad_func.h"
+#include "tensorflow/core/user_ops/gpu_cholgrad.h"
 
 namespace tensorflow {
 

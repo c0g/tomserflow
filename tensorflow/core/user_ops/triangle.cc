@@ -10,7 +10,7 @@ REGISTER_OP("Triangle").Input("a: T").Output("x: T").Attr( "T: {float, double}")
 #include "tensorflow/core/framework/tensor_types.h"
 #include "tensorflow/core/framework/types.h"
 
-#include "tensorflow/core/user_ops/triangle_func_cpu.h"
+#include "tensorflow/core/user_ops/triangle.h"
 
 namespace tensorflow {
 typedef Eigen::ThreadPoolDevice CPUDevice;
