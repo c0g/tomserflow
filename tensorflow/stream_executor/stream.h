@@ -26,6 +26,7 @@ limitations under the License.
 #include <memory>
 
 #include "tensorflow/stream_executor/blas.h"
+#include "tensorflow/stream_executor/solver.h"
 #include "tensorflow/stream_executor/device_memory.h"
 #include "tensorflow/stream_executor/dnn.h"
 #include "tensorflow/stream_executor/event.h"
@@ -378,6 +379,14 @@ class Stream {
         host_src.data(), host_src.size() * sizeof(ElementType),
         Quantization<ElementType>::kModeId, gpu_unquantized_dst);
   }
+
+  /////////////////
+  // SOLVER support
+  Stream &ThenSolverPotrfWithScratch(uint64 elem_count, solver::UpperLower uplo,
+                      DeviceMemory<float>* A, uint64 lda,
+                      ScratchAllocator* scratch_allocator); 
+  Stream &ThenSolverPotrf(uint64 elem_count, solver::UpperLower uplo,
+                      DeviceMemory<float>* A, uint64 lda); 
 
   /////////////////
   // BLAS support

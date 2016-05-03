@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <map>
 
+#include "tensorflow/stream_executor/solver.h"
 #include "tensorflow/stream_executor/blas.h"
 #include "tensorflow/stream_executor/dnn.h"
 #include "tensorflow/stream_executor/fft.h"
@@ -37,7 +38,7 @@ class StreamExecutorInterface;
 
 // The PluginRegistry is a singleton that maintains the set of registered
 // "support library" plugins. Currently, there are four kinds of plugins:
-// BLAS, DNN, FFT, and RNG. Each interface is defined in the corresponding
+// SOLVER, BLAS, DNN, FFT, and RNG. Each interface is defined in the corresponding
 // gpu_{kind}.h header.
 //
 // At runtime, a StreamExecutor object will query the singleton registry to
@@ -50,6 +51,7 @@ class StreamExecutorInterface;
 // late-loading from distorting performance/benchmarks as much as possible.
 class PluginRegistry {
  public:
+  typedef solver::SolverSupport* (*SolverFactory)(internal::StreamExecutorInterface*);
   typedef blas::BlasSupport* (*BlasFactory)(internal::StreamExecutorInterface*);
   typedef dnn::DnnSupport* (*DnnFactory)(internal::StreamExecutorInterface*);
   typedef fft::FftSupport* (*FftFactory)(internal::StreamExecutorInterface*);
@@ -104,6 +106,7 @@ class PluginRegistry {
  private:
   // Containers for the sets of registered factories, by plugin kind.
   struct PluginFactories {
+    std::map<PluginId, SolverFactory> solver;
     std::map<PluginId, BlasFactory> blas;
     std::map<PluginId, DnnFactory> dnn;
     std::map<PluginId, FftFactory> fft;
@@ -114,7 +117,7 @@ class PluginRegistry {
   // particular Platform).
   struct DefaultFactories {
     DefaultFactories();
-    PluginId blas, dnn, fft, rng;
+    PluginId solver, blas, dnn, fft, rng;
   };
 
   PluginRegistry();

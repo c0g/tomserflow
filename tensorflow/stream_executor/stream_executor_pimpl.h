@@ -322,6 +322,10 @@ class StreamExecutor {
   // Note: on OpenCL we implicitly select platform zero at the moment.
   int PlatformDeviceCount() const;
 
+  // Returns whether the StreamExecutor supports Solver routines for the platform
+  // that underlies this interface.
+  bool SupportsSolver() const;
+
   // Returns whether the StreamExecutor supports BLAS routines for the platform
   // that underlies this interface.
   bool SupportsBlas() const;
@@ -410,6 +414,21 @@ class StreamExecutor {
   friend class TypedKernel;
   template <typename... Args>
   friend struct ThenBlasImpl;
+   template <typename... Args>
+  friend struct ThenSolverImpl;
+
+  // Gets-or-creates (creates with memoization) a SolverSupport datatype that can
+  // be used to execute Solver routines on the current platform. This is typically
+  // not user-facing, as users will use the Stream::ThenSolver* family of routines
+  // to entrain Solver operations. See solver.h for additional details.
+  //
+  // Ownership is not transferred to the caller -- ownership is retained by this
+  // object for memoization. This Solver interface is also only expected to be
+  // used by a Stream for entraining calls to Solver functionality.
+  //
+  // Returns null if there was an error initializing the Solver support for the
+  // underlying platform.
+  solver::SolverSupport *AsSolver();
 
   // Gets-or-creates (creates with memoization) a BlasSupport datatype that can
   // be used to execute BLAS routines on the current platform. This is typically
@@ -551,6 +570,10 @@ class StreamExecutor {
   // A mapping of pointer (to GPU memory) to string representation of the stack
   // (of the allocating thread) at the time at which the pointer was allocated.
   std::map<void *, AllocRecord> mem_allocs_ GUARDED_BY(mu_);
+
+  // Memoized Solver support object -- we only want to create this once when asked
+  // for a Solver interface.
+  std::unique_ptr<solver::SolverSupport> solver_ GUARDED_BY(mu_);
 
   // Memoized BLAS support object -- we only want to create this once when asked
   // for a BLAS interface.

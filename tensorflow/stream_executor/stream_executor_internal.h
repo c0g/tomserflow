@@ -52,6 +52,10 @@ class KernelBase;
 class Stream;
 class Timer;
 
+namespace solver {
+class SolverSupport;
+}  // namespace solver
+
 namespace blas {
 class BlasSupport;
 }  // namespace blas
@@ -274,6 +278,16 @@ class StreamExecutorInterface {
   virtual bool UnregisterTraceListener(TraceListener* listener) {
     return false;
   }
+  // Returns whether this StreamExecutor has Solver support for its underlying
+  // platform.
+  virtual bool SupportsSolver() const { return false; }
+
+  // Creates a new SolverSupport object, ownership is transferred to the caller.
+  // If SupportsSolver() is false, this will always return null.
+  //
+  // If SupportsSolver() is true, this may return null, for example, if the Solver
+  // initialization fails.
+  virtual solver::SolverSupport *CreateSolver() { return nullptr; }
 
   // Returns whether this StreamExecutor has BLAS support for its underlying
   // platform.

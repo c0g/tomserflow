@@ -21,6 +21,7 @@ limitations under the License.
 
 #include <atomic>
 
+#include "tensorflow/stream_executor/solver.h"
 #include "tensorflow/stream_executor/blas.h"
 #include "tensorflow/stream_executor/fft.h"
 #include "tensorflow/stream_executor/lib/env.h"
@@ -274,6 +275,10 @@ int StreamExecutor::PlatformDeviceCount() const {
   return implementation_->PlatformDeviceCount();
 }
 
+bool StreamExecutor::SupportsSolver() const {
+  return implementation_->SupportsSolver();
+}
+
 bool StreamExecutor::SupportsBlas() const {
   return implementation_->SupportsBlas();
 }
@@ -294,6 +299,16 @@ dnn::DnnSupport *StreamExecutor::AsDnn() {
 
   dnn_.reset(implementation_->CreateDnn());
   return dnn_.get();
+}
+
+solver::SolverSupport *StreamExecutor::AsSolver() {
+  mutex_lock lock{mu_};
+  if (solver_ != nullptr) {
+    return solver_.get();
+  }
+
+  solver_.reset(implementation_->CreateSolver());
+  return solver_.get();
 }
 
 blas::BlasSupport *StreamExecutor::AsBlas() {
