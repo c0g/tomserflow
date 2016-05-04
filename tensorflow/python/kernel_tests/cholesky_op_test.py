@@ -41,16 +41,18 @@ class CholeskyOpTest(tf.test.TestCase):
   def _verifyCholesky(self, x):
     # Verify that LL^T == x.
     with self.test_session() as sess:
-      # Check the batch version, which works for ndim >= 2.
-      chol = tf.batch_cholesky(x)
-      verification = tf.batch_matmul(chol, chol, adj_x=False, adj_y=True)
-      self._verifyCholeskyBase(sess, x, chol, verification)
+      for d in ['/cpu:0', 'gpu:0']:
+        with tf.device(d):
+          # Check the batch version, which works for ndim >= 2.
+          chol = tf.batch_cholesky(x)
+          verification = tf.batch_matmul(chol, chol, adj_x=False, adj_y=True)
+          self._verifyCholeskyBase(sess, x, chol, verification)
 
-      if x.ndim == 2:  # Check the simple form of cholesky
-        chol = tf.cholesky(x)
-        verification = tf.matmul(
-            chol, chol, transpose_a=False, transpose_b=True)
-        self._verifyCholeskyBase(sess, x, chol, verification)
+          if x.ndim == 2:  # Check the simple form of cholesky
+            chol = tf.cholesky(x)
+            verification = tf.matmul(
+                chol, chol, transpose_a=False, transpose_b=True)
+            self._verifyCholeskyBase(sess, x, chol, verification)
 
   def testBasic(self):
     self._verifyCholesky(np.array([[4., -1., 2.], [-1., 6., 0], [2., 0., 5.]]))
@@ -69,13 +71,17 @@ class CholeskyOpTest(tf.test.TestCase):
     self._verifyCholesky(matrices)
 
   def testNonSquareMatrix(self):
-    with self.assertRaises(ValueError):
-      tf.cholesky(np.array([[1., 2., 3.], [3., 4., 5.]]))
+    for d in ['/cpu:0', 'gpu:0']:
+        with tf.device(d):
+          with self.assertRaises(ValueError):
+            tf.cholesky(np.array([[1., 2., 3.], [3., 4., 5.]]))
 
   def testWrongDimensions(self):
-    tensor3 = tf.constant([1., 2.])
-    with self.assertRaises(ValueError):
-      tf.cholesky(tensor3)
+    for d in ['/cpu:0', 'gpu:0']:
+      with tf.device(d):
+        tensor3 = tf.constant([1., 2.])
+        with self.assertRaises(ValueError):
+          tf.cholesky(tensor3)
 
   def testNotInvertible(self):
      # The input should be invertible.
@@ -120,26 +126,28 @@ class CholeskyGradTest(tf.test.TestCase):
 
   def runFiniteDifferences(self, shapes, dtypes=(tf.float32, tf.float64),
                            scalarTest=False):
-    with self.test_session(use_gpu=False):
+    with self.test_session(use_gpu=True):
       for shape in shapes:
         for dtype in dtypes:
-          if not(scalarTest):
-            x = tf.constant(np.random.randn(shape[0], shape[1]), dtype)
-            K = tf.matmul(x, tf.transpose(x)) / shape[0]  # K is posdef
-            y = tf.cholesky(K)
-          else:  # This is designed to be a faster test for larger matrices.
-            x = tf.constant(np.random.randn(), dtype)
-            R = tf.constant(np.random.randn(shape[0], shape[1]), dtype)
-            e = tf.mul(R, x)
-            K = tf.matmul(e, tf.transpose(e)) / shape[0]  # K is posdef
-            y = tf.reduce_mean(tf.cholesky(K))
-          error = tf.test.compute_gradient_error(x, x._shape_as_list(),
-                                                 y, y._shape_as_list())
-          tf.logging.info("error = %f", error)
-          if dtype == tf.float64:
-            self.assertLess(error, 1e-5)
-          else:
-            self.assertLess(error, 2e-3)
+          for d in ['/cpu:0', 'gpu:0']:
+            with tf.device(d):
+              if not(scalarTest):
+                x = tf.constant(np.random.randn(shape[0], shape[1]), dtype)
+                K = tf.matmul(x, tf.transpose(x)) / shape[0]  # K is posdef
+                y = tf.cholesky(K)
+              else:  # This is designed to be a faster test for larger matrices.
+                x = tf.constant(np.random.randn(), dtype)
+                R = tf.constant(np.random.randn(shape[0], shape[1]), dtype)
+                e = tf.mul(R, x)
+                K = tf.matmul(e, tf.transpose(e)) / shape[0]  # K is posdef
+                y = tf.reduce_mean(tf.cholesky(K))
+              error = tf.test.compute_gradient_error(x, x._shape_as_list(),
+                                                     y, y._shape_as_list())
+              tf.logging.info("error = %f", error)
+              if dtype == tf.float64:
+                self.assertLess(error, 1e-5)
+              else:
+                self.assertLess(error, 2e-3)
 
 if __name__ == "__main__":
   tf.test.main()
