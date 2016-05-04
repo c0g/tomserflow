@@ -24,11 +24,16 @@ namespace gputools {
 PLUGIN_REGISTRY_DEFINE_PLUGIN_ID(PluginConfig::kDefault);
 
 PluginConfig::PluginConfig()
-    : blas_(kDefault), dnn_(kDefault), fft_(kDefault), rng_(kDefault) {}
+    : solver_(kDefault), blas_(kDefault), dnn_(kDefault), fft_(kDefault), rng_(kDefault) {}
 
 bool PluginConfig::operator==(const PluginConfig& rhs) const {
-  return blas_ == rhs.blas_ && dnn_ == rhs.dnn_ && fft_ == rhs.fft_ &&
+  return solver_ == rhs.solver_ && blas_ == rhs.blas_ && dnn_ == rhs.dnn_ && fft_ == rhs.fft_ &&
          rng_ == rhs.rng_;
+}
+
+PluginConfig& PluginConfig::SetSolver(PluginId solver) {
+  solver_ = solver;
+  return *this;
 }
 
 PluginConfig& PluginConfig::SetBlas(PluginId blas) {

@@ -33,6 +33,8 @@ REGISTER_OP("GPUCholesky")
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 
+#include "tensorflow/core/platform/stream_executor.h"
+
   //WRONG: should include from ../kernels/ but I don't know how to Bazel
 #include "tensorflow/core/user_ops/linalg_ops_common.h"
 #include "tensorflow/core/lib/core/errors.h"
@@ -40,6 +42,11 @@ REGISTER_OP("GPUCholesky")
 #include "tensorflow/core/platform/types.h"
 
 #include "tensorflow/core/user_ops/gpu_cholesky.h"
+#include "tensorflow/core/user_ops/cuda_matrix_helper.h"
+
+#include "tensorflow/stream_executor/solver.h"
+
+  #include <iostream>
 
 // #include "cusolverDn.h"
 
@@ -50,23 +57,6 @@ typedef Eigen::GpuDevice GPUDevice;
 
 namespace tensorflow {
   namespace functors {
-
-    template <typename T>
-    struct chol_functor<CPUDevice, T> {
-      using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-      using ConstMatrixMap = Eigen::Map<const Matrix>;
-      using MatrixMap = Eigen::Map<Matrix>;
-      void operator()(const CPUDevice& d, const T* in, const int M, T* out, bool& success) {
-        //The next three lines are necessary to get Eigen matrix behaviour.
-        const ConstMatrixMap in_mat(in, M, M);
-        MatrixMap out_mat(out, M, M);
-        Eigen::LLT<Matrix> llt_decomposition(in_mat);
-
-        // Output the lower triangular in a dense form.
-        out_mat = llt_decomposition.matrixL();
-        success = llt_decomposition.info() == Eigen::Success;
-      }
-    };
   }
 
 template <typename Device, typename T>
@@ -102,15 +92,99 @@ class CholeskyOp : public UnaryLinearAlgebraOpBase {
       // Therefore, we return X.
       return;
     }
-    functors::chol_functor<Device, T> chol;
     bool success = true;
-    chol(context->eigen_device<Device>(), in.flat<T>().data(), inshape.dim_size(0), 
-      out->flat<T>().data(), success);
+    functors::chol_functor<Device, T> chol;
+    chol(context, in.flat<T>().data(), 
+      inshape.dim_size(0), out->flat<T>().data(), success);
     OP_REQUIRES(context, success,
                     errors::InvalidArgument("LLT decomposition was not successful. "
                                             "The input might not be valid."));
   }
 };
+
+namespace {
+    template <typename T>
+    perftools::gputools::DeviceMemory<T> AsDeviceMemory(const T* cuda_memory)
+    {
+        perftools::gputools::DeviceMemoryBase wrapped(const_cast<T*>(cuda_memory));
+        perftools::gputools::DeviceMemory<T> typed(wrapped);
+        return typed;
+    }
+    class CusolverScratchAllocator : public perftools::gputools::ScratchAllocator {
+     public:
+      using Stream = ::perftools::gputools::Stream;
+      using DeviceMemoryBytes = ::perftools::gputools::DeviceMemory<uint8>;
+
+      CusolverScratchAllocator(OpKernelContext* context) : context_(context) {}
+
+      int64 GetMemoryLimitInBytes(Stream* stream) override { return -1; }
+
+      perftools::gputools::port::StatusOr<DeviceMemoryBytes> AllocateBytes(
+          Stream* stream, int64 byte_size) override {
+        Tensor temporary_memory;
+
+        Status allocation_status(context_->allocate_temp(
+            DT_UINT8, TensorShape({byte_size}), &temporary_memory));
+        if (!allocation_status.ok()) {
+          return perftools::gputools::port::StatusOr<DeviceMemoryBytes>(
+              DeviceMemoryBytes::MakeFromByteSize(nullptr, 0));
+        }
+        // Hold the reference of the allocated tensors until the end of the
+        // allocator.
+        allocated_tensors_.push_back(temporary_memory);
+        std::cout << "Allocating " << byte_size << " bytes" << std::endl;
+        return perftools::gputools::port::StatusOr<DeviceMemoryBytes>(
+            DeviceMemoryBytes::MakeFromByteSize(
+                temporary_memory.flat<uint8>().data(),
+                temporary_memory.flat<uint8>().size()));
+      }
+
+     private:
+      OpKernelContext* context_;
+      std::vector<Tensor> allocated_tensors_;
+    };
+} // anonymous namespace
+namespace functors {
+
+    template <typename T>
+    struct chol_functor<CPUDevice, T> {
+      using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+      using ConstMatrixMap = Eigen::Map<const Matrix>;
+      using MatrixMap = Eigen::Map<Matrix>;
+      void operator()(OpKernelContext*, const T* in, const int M, T* out, bool& success) {
+        //The next three lines are necessary to get Eigen matrix behaviour.
+        const ConstMatrixMap in_mat(in, M, M);
+        MatrixMap out_mat(out, M, M);
+        Eigen::LLT<Matrix> llt_decomposition(in_mat);
+
+        // Output the lower triangular in a dense form.
+        out_mat = llt_decomposition.matrixL();
+        success = llt_decomposition.info() == Eigen::Success;
+      }
+    };
+
+    template <typename T>
+    struct chol_functor<GPUDevice, T> {
+      using Helper = CUDAMatrixHelper<GPUDevice, T>;
+      void operator()(OpKernelContext* ctx, const T* in, const int M, T* out, bool& success) {
+        std::cout << " Running GPU chol functor " << std::endl;
+        Matrix<const T> inMat{in, 0, M, M, M};
+        Matrix<T> outMat{out, 0, M, M, M};
+        
+        auto* stream = ctx->op_device_context()->stream();
+        auto outdev = AsDeviceMemory<T>(out);
+        std::cout << "out addr " << outdev.opaque() << std::endl;
+        // Copy from in to out
+        Helper::copy(ctx->eigen_device<GPUDevice>(), outMat, inMat);
+        CusolverScratchAllocator scratch_allocator(ctx);
+        stream->ThenSolverPotrfWithScratch(perftools::gputools::solver::UpperLower::kUpper, 
+                                M, &outdev, M, &scratch_allocator);
+        Helper::tril(ctx->eigen_device<GPUDevice>(), outMat);
+        stream->BlockHostUntilDone();
+        success = true;
+      }
+  };
+} // functors
 
 REGISTER_KERNEL_BUILDER(
     Name("GPUCholesky")

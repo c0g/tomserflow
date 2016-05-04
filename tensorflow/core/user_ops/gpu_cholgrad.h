@@ -1,7 +1,6 @@
 #pragma once
 #include "tensorflow/core/framework/tensor.h"
 namespace tensorflow {
-
 	    template <typename T>
         struct Matrix {
             T* dataptr;
@@ -33,14 +32,5 @@ namespace tensorflow {
                 B = parent.view(k, -1, 0, j);
                 C = parent.view(k, -1, j, k);
             }
-        };
-
-        template <typename Device, typename T>
-        struct CholgradHelper {
-        	static void copy(const Device& d, Matrix<T> dst, Matrix<const T>);
-            static void symmetrise(const Device&, Matrix<T>);
-            static void phi(const Device&, Matrix<T>);
-            static void tril(const Device&, Matrix<T>);
-            static void reflect_half(const Device&, Matrix<T>);
         };
 }

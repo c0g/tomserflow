@@ -38,6 +38,8 @@ limitations under the License.
 #include "tensorflow/stream_executor/scratch_allocator.h"
 #include "tensorflow/stream_executor/stream_executor.h"
 
+#include <iostream>
+
 namespace perftools {
 namespace gputools {
 namespace cuda {

@@ -14,13 +14,12 @@ tf_custom_op_library(
 
 tf_custom_op_library(
     name = "gpu_cholgrad.so",
-    srcs = ["gpu_cholgrad.cc", "gpu_cholgrad.h"],
-    gpu_srcs = ["gpu_cholgrad.cu.cc", "gpu_cholgrad.h", "gpu_cholgrad_gpu.h"]
+    srcs = ["gpu_cholgrad.cc", "gpu_cholgrad.h", "cuda_matrix_helper.h"],
+    gpu_srcs = ["gpu_cholgrad.cu.cc", "gpu_cholgrad.h", "cuda_matrix_helper.h", "cuda_matrix_helper_impl.h"]
 )
 
 tf_custom_op_library(
     name = "gpu_cholesky.so",
-    srcs = ["gpu_cholesky.cc", "gpu_cholesky.h", "linalg_ops_common.h"],
-    gpu_srcs = ["gpu_cholesky.cu.cc", "gpu_cholesky.h", 
-    			"gpu_cholesky_gpu.h", "triangle_gpu.h", "triangle.h"],
+    srcs = ["gpu_cholesky.cc", "gpu_cholesky.h", "linalg_ops_common.h", "cuda_matrix_helper.h"],
+    gpu_srcs = ["gpu_cholesky.cu.cc", "gpu_cholesky.h",  "cuda_matrix_helper.h", "cuda_matrix_helper_impl.h"]
 )

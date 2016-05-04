@@ -33,7 +33,8 @@ REGISTER_OP("GpuCholGrad")
 #include "tensorflow/core/platform/stream_executor.h"
 #endif // GOOGLE_CUDA
 
-#include "tensorflow/core/user_ops/gpu_cholgrad.h"
+
+#include "tensorflow/core/user_ops/cuda_matrix_helper.h"
 #include <algorithm>
 namespace tensorflow {
 
@@ -307,8 +308,9 @@ namespace functors {
 
     template <typename T>
     struct ComputeCholGrad<GPUDevice, T> {
+        // TODO: Make this a parameter
         const int blocksize = 256;
-        using Helper = CholgradHelper<GPUDevice, T>;
+        using Helper = CUDAMatrixHelper<T>;
         void operator()(OpKernelContext* ctx, const Tensor& Ltensor, const Tensor& Ltensorbar, Tensor* Atensorbar)
         {
             // const Eigen::GpuDevice dev = ctx->eigen_device<GPUDevice>();

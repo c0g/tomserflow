@@ -26,6 +26,7 @@ limitations under the License.
 #include "tensorflow/stream_executor/stream_executor_internal.h"
 #include "tensorflow/stream_executor/stream_executor_pimpl.h"
 
+#include <iostream>
 namespace perftools {
 namespace gputools {
 
@@ -891,15 +892,28 @@ Stream &Stream::ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_
   VLOG_CALL(PARAM(uplo), PARAM(elem_count), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
   ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<float> *, uint64, 
       ScratchAllocator*> impl;
+      std::cout << "Calling stream::ThenSolverPotrfWithScratch<float>" << std::endl;
   return impl(this, &solver::SolverSupport::DoSolverPotrf, uplo, elem_count,
     A, lda, scratch_allocator);
 }
-
+Stream &Stream::ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
+                      DeviceMemory<double>* A, uint64 lda,
+                      ScratchAllocator* scratch_allocator) {
+  VLOG_CALL(PARAM(uplo), PARAM(elem_count), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
+  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<double> *, uint64, 
+      ScratchAllocator*> impl;
+      std::cout << "Calling stream::ThenSolverPotrfWithScratch<double>" << std::endl;
+  return impl(this, &solver::SolverSupport::DoSolverPotrf, uplo, elem_count,
+    A, lda, scratch_allocator);
+}
 Stream &Stream::ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count, 
                       DeviceMemory<float>* A, uint64 lda) {
   return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, nullptr);
 }
-
+Stream &Stream::ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count, 
+                      DeviceMemory<double>* A, uint64 lda) {
+  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, nullptr);
+}
 // A functor that implements ThenBlasXXX interfaces, which calls DoBlasXXX
 // functions and logs for errors.
 template <typename... Args>
