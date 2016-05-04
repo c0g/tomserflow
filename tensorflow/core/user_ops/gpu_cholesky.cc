@@ -18,10 +18,14 @@ limitations under the License.
 //                     and OP_REQUIRES.
 
 #include "tensorflow/core/framework/op.h"
-REGISTER_OP("GPUCholesky")
+REGISTER_OP("Cholesky")
   .Input("l: T").Output("g: T")
   .Attr("T : {float, double}")
   .Doc("Get cholesky of a square PSD matrix.");
+REGISTER_OP("BatchedCholesky")
+  .Input("l: T").Output("g: T")
+  .Attr("T : {float, double}")
+  .Doc("Get cholesky of a batched of square PSD matrices.");
 
 #include <cmath>
 
@@ -46,8 +50,6 @@ REGISTER_OP("GPUCholesky")
 
 #include "tensorflow/stream_executor/solver.h"
 
-  #include <iostream>
-
 // #include "cusolverDn.h"
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -59,7 +61,7 @@ namespace tensorflow {
   namespace functors {
   }
 
-template <typename Device, typename T>
+template <typename Device, typename T, bool BatchOp>
 class CholeskyOp : public UnaryLinearAlgebraOpBase {
  public:
   explicit CholeskyOp(OpKernelConstruction* context)
@@ -80,7 +82,7 @@ class CholeskyOp : public UnaryLinearAlgebraOpBase {
   }
 
   bool SupportsBatchOperation() {
-    return 0;
+    return BatchOp;
   }
   void ComputeMatrix(OpKernelContext* context, int64 matrix_idx, 
         const Tensor& in, const TensorShape& inshape,
@@ -92,10 +94,11 @@ class CholeskyOp : public UnaryLinearAlgebraOpBase {
       // Therefore, we return X.
       return;
     }
+    const T* in_sub = in.flat<T>().data() + matrix_idx * inshape.num_elements();
+    T* out_sub = out->flat<T>().data() + matrix_idx * outshape.num_elements();
     bool success = true;
     functors::chol_functor<Device, T> chol;
-    chol(context, in.flat<T>().data(), 
-      inshape.dim_size(0), out->flat<T>().data(), success);
+    chol(context, in_sub, inshape.dim_size(0), out_sub, success);
     OP_REQUIRES(context, success,
                     errors::InvalidArgument("LLT decomposition was not successful. "
                                             "The input might not be valid."));
@@ -132,7 +135,6 @@ namespace {
         // Hold the reference of the allocated tensors until the end of the
         // allocator.
         allocated_tensors_.push_back(temporary_memory);
-        std::cout << "Allocating " << byte_size << " bytes" << std::endl;
         return perftools::gputools::port::StatusOr<DeviceMemoryBytes>(
             DeviceMemoryBytes::MakeFromByteSize(
                 temporary_memory.flat<uint8>().data(),
@@ -167,13 +169,11 @@ namespace functors {
     struct chol_functor<GPUDevice, T> {
       using Helper = CUDAMatrixHelper<GPUDevice, T>;
       void operator()(OpKernelContext* ctx, const T* in, const int M, T* out, bool& success) {
-        std::cout << " Running GPU chol functor " << std::endl;
         Matrix<const T> inMat{in, 0, M, M, M};
         Matrix<T> outMat{out, 0, M, M, M};
         
         auto* stream = ctx->op_device_context()->stream();
         auto outdev = AsDeviceMemory<T>(out);
-        std::cout << "out addr " << outdev.opaque() << std::endl;
         // Copy from in to out
         Helper::copy(ctx->eigen_device<GPUDevice>(), outMat, inMat);
         CusolverScratchAllocator scratch_allocator(ctx);
@@ -187,27 +187,51 @@ namespace functors {
 } // functors
 
 REGISTER_KERNEL_BUILDER(
-    Name("GPUCholesky")
+    Name("Cholesky")
     .Device(DEVICE_CPU)
     .TypeConstraint<float>("T"),
-    CholeskyOp<CPUDevice, float>);
+    CholeskyOp<CPUDevice, float, false>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GPUCholesky")
+    Name("Cholesky")
     .Device(DEVICE_CPU)
     .TypeConstraint<double>("T"),
-    CholeskyOp<CPUDevice, double>);
+    CholeskyOp<CPUDevice, double, false>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GPUCholesky")
+    Name("Cholesky")
     .Device(DEVICE_GPU)
     .TypeConstraint<float>("T"),
-    CholeskyOp<GPUDevice, float>);
+    CholeskyOp<GPUDevice, float, false>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GPUCholesky")
+    Name("Cholesky")
     .Device(DEVICE_GPU)
     .TypeConstraint<double>("T"),
-    CholeskyOp<GPUDevice, double>);
+    CholeskyOp<GPUDevice, double, false>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchedCholesky")
+    .Device(DEVICE_CPU)
+    .TypeConstraint<float>("T"),
+    CholeskyOp<CPUDevice, float, true>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchedCholesky")
+    .Device(DEVICE_CPU)
+    .TypeConstraint<double>("T"),
+    CholeskyOp<CPUDevice, double, true>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchedCholesky")
+    .Device(DEVICE_GPU)
+    .TypeConstraint<float>("T"),
+    CholeskyOp<GPUDevice, float, true>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchedCholesky")
+    .Device(DEVICE_GPU)
+    .TypeConstraint<double>("T"),
+    CholeskyOp<GPUDevice, double, true>);
 
 }  // namespace tensorflow

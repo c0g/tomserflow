@@ -237,6 +237,21 @@ cc_header_only_library(
 )
 
 cc_library(
+    name = "cuda_matrix_helper",
+    hdrs = ["cuda_matrix_helper.h", "cuda_matrix_helper_impl.h"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//tensorflow/core:framework",
+        "//third_party/eigen3",
+    ],
+)
+
+cc_header_only_library(
+    name = "cuda_matrix_helper_lib",
+    deps = [":cuda_matrix_helper"],
+)
+
+cc_library(
     name = "eigen_helpers",
     hdrs = [
         "eigen_activations.h",
@@ -807,6 +822,7 @@ tf_cc_tests(
     ],
 )
 
+
 tf_kernel_libraries(
     name = "linalg",
     prefixes = [
@@ -820,6 +836,7 @@ tf_kernel_libraries(
         "matrix_triangular_solve_op",
     ],
     deps = [
+        ":cuda_matrix_helper_lib",
         ":binary_linalg_ops_common",
         ":linalg_ops_common",
         "//tensorflow/core:framework",
@@ -828,6 +845,8 @@ tf_kernel_libraries(
         "//third_party/eigen3",
     ],
 )
+
+
 
 # TODO(josh11b): Should these two *linalg_ops_common libraries be merged?
 cc_library(

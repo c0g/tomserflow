@@ -16,7 +16,7 @@ limitations under the License.
 #define EIGEN_USE_THREADS
 
 #include "tensorflow/core/framework/op.h"
-REGISTER_OP("GpuCholGrad")
+REGISTER_OP("CholeskyGrad")
     .Input("l: T")
     .Input("lbar: T")
     .Output("abar: T")
@@ -411,25 +411,25 @@ namespace functors {
 #endif // GOOGLE_CUDA
 
 REGISTER_KERNEL_BUILDER(
-    Name("GpuCholGrad")
+    Name("CholeskyGrad")
         .Device(DEVICE_CPU)
         .TypeConstraint<float>("T"),
     CholeskyGrad<CPUDevice, float>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GpuCholGrad")
+    Name("CholeskyGrad")
         .Device(DEVICE_CPU)
         .TypeConstraint<double>("T"),
     CholeskyGrad<CPUDevice, double>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GpuCholGrad")
+    Name("CholeskyGrad")
         .Device(DEVICE_GPU)
         .TypeConstraint<float>("T"),
     CholeskyGrad<GPUDevice, float>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("GpuCholGrad")
+    Name("CholeskyGrad")
         .Device(DEVICE_GPU)
         .TypeConstraint<double>("T"),
     CholeskyGrad<GPUDevice, double>);

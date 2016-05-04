@@ -38,8 +38,6 @@ limitations under the License.
 #include "tensorflow/stream_executor/scratch_allocator.h"
 #include "tensorflow/stream_executor/stream_executor.h"
 
-#include <iostream>
-
 namespace perftools {
 namespace gputools {
 namespace cuda {
@@ -226,7 +224,6 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
                           solver::UpperLower uplo, uint64 elem_count, 
                           DeviceMemory<T> *A, uint64 lda,
                           ScratchAllocator *scratch_allocator) {
-  std::cout << "Calling cuda_solver::DoSolverPotrfWithScratchInternal" << std::endl;
   int Lwork; // must be int: cusolver expect int point
   if (!DoSolverInternal(size_func, stream,
                       CUDASolverUpperLower(uplo), elem_count,
@@ -235,7 +232,6 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
     return port::Status(port::error::INTERNAL,
                     "failed SOLVER call to calculate scratch space.");
   }
-  std::cout << "Need " << Lwork << " size scratch space" << std::endl;
 
   DeviceMemory<T> scratch;
   DeviceMemory<int> devinfo;
@@ -245,7 +241,6 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
   uint64 size_scratch = sizeof(T) * Lwork;
   uint64 size_devinfo = sizeof(int);
   if (scratch_allocator != nullptr) {
-    std::cout << "Have scratch_allocator" << std::endl;
     SE_ASSIGN_OR_RETURN(DeviceMemory<uint8> bytes_scratch,
                         scratch_allocator->AllocateBytes(stream, size_scratch));
     scratch = DeviceMemory<T>(bytes_scratch);
@@ -260,8 +255,6 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
                         stream->AllocateTemporaryArray<T>(Lwork));
     devinfo = DeviceMemory<int>(*devinfo_temp->mutable_device_memory());
   }
-  std::cout << CUDAMemoryMutable(A) << " matrix  address" << std::endl;
-  std::cout << (T*)scratch.opaque() << " scratch address" << std::endl;
 
   bool ok = DoSolverInternal(solve_func, stream,
                         CUDASolverUpperLower(uplo), elem_count,
@@ -278,7 +271,6 @@ bool CUDASolver::DoSolverPotrf(Stream *stream,
                           solver::UpperLower uplo, uint64 elem_count,
                           DeviceMemory<float> *A, uint64 lda,
                           ScratchAllocator *scratch_allocator) {
-  std::cout << "calling CUDASolver::DoSolverPotrf<float>" << std::endl;
   port::Status status = DoSolverPotrfWithScratchInternal(
       dynload::cusolverDnSpotrf_bufferSize, dynload::cusolverDnSpotrf,
       stream, uplo, elem_count, A, lda, scratch_allocator);
@@ -292,7 +284,6 @@ bool CUDASolver::DoSolverPotrf(Stream *stream,
                           solver::UpperLower uplo, uint64 elem_count,
                           DeviceMemory<double> *A, uint64 lda,
                           ScratchAllocator *scratch_allocator) {
-  std::cout << "calling CUDASolver::DoSolverPotrf<double>" << std::endl;
   port::Status status = DoSolverPotrfWithScratchInternal(
       dynload::cusolverDnDpotrf_bufferSize, dynload::cusolverDnDpotrf,
       stream, uplo, elem_count, A, lda, scratch_allocator);
