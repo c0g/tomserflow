@@ -52,7 +52,27 @@ class MatrixTriangularSolveOpTest(tf.test.TestCase):
         a_np = np.tile(a_np, batch_dims + [1, 1])
         b = np.tile(b, batch_dims + [1, 1])
 
-      with self.test_session():
+      with self.test_session(force_gpu=True):
+        # Test the batch version, which works for ndim >= 2
+        tf_ans = tf.batch_matrix_triangular_solve(
+            a, b, lower=lower, adjoint=adjoint)
+        out = tf_ans.eval()
+
+        np_ans = np.linalg.solve(a_np, b)
+
+        self.assertEqual(np_ans.shape, tf_ans.get_shape())
+        self.assertEqual(np_ans.shape, out.shape)
+        self.assertAllClose(np_ans, out)
+
+        if a.ndim == 2:
+          # Test the simple version
+          tf_ans = tf.matrix_triangular_solve(
+              a, b, lower=lower, adjoint=adjoint)
+          out = tf_ans.eval()
+          self.assertEqual(np_ans.shape, tf_ans.get_shape())
+          self.assertEqual(np_ans.shape, out.shape)
+          self.assertAllClose(np_ans, out)
+      with self.test_session(force_gpu=True):
         # Test the batch version, which works for ndim >= 2
         tf_ans = tf.batch_matrix_triangular_solve(
             a, b, lower=lower, adjoint=adjoint)
@@ -104,7 +124,12 @@ class MatrixTriangularSolveOpTest(tf.test.TestCase):
     # right-hand sides.
     matrix = np.array([[1., 0.], [0., 1.]])
     rhs = np.array([[1., 0.]])
-    with self.test_session():
+    with self.test_session(force_gpu=False):
+      with self.assertRaises(ValueError):
+        self._verifySolve(matrix, rhs)
+      with self.assertRaises(ValueError):
+        self._verifySolve(matrix, rhs, batch_dims=[2, 3])
+    with self.test_session(force_gpu=True):
       with self.assertRaises(ValueError):
         self._verifySolve(matrix, rhs)
       with self.assertRaises(ValueError):

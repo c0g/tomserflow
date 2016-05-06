@@ -25,7 +25,7 @@ class BatchMatrixDiagTest(tf.test.TestCase):
   _use_gpu = False
 
   def testVector(self):
-    with self.test_session(use_gpu=self._use_gpu):
+    with self.test_session(use_gpu=True, force_gpu=True):
       v = np.array([1.0, 2.0, 3.0])
       mat = np.diag(v)
       v_diag = tf.batch_matrix_diag(v)
@@ -33,7 +33,7 @@ class BatchMatrixDiagTest(tf.test.TestCase):
       self.assertAllEqual(v_diag.eval(), mat)
 
   def testBatchVector(self):
-    with self.test_session(use_gpu=self._use_gpu):
+    with self.test_session(use_gpu=True, force_gpu=True):
       v_batch = np.array([[1.0, 2.0, 3.0],
                           [4.0, 5.0, 6.0]])
       mat_batch = np.array(
@@ -52,14 +52,14 @@ class BatchMatrixDiagTest(tf.test.TestCase):
       tf.batch_matrix_diag(0)
 
   def testInvalidShapeAtEval(self):
-    with self.test_session(use_gpu=self._use_gpu):
+    with self.test_session(use_gpu=True, force_gpu=True):
       v = tf.placeholder(dtype=tf.float32)
       with self.assertRaisesOpError("input must be at least 1-dim"):
         tf.batch_matrix_diag(v).eval(feed_dict={v: 0.0})
 
   def testGrad(self):
     shapes = ((3,), (7, 4))
-    with self.test_session(use_gpu=self._use_gpu):
+    with self.test_session(use_gpu=True, force_gpu=True):
       for shape in shapes:
         x = tf.constant(np.random.rand(*shape), np.float32)
         y = tf.batch_matrix_diag(x)

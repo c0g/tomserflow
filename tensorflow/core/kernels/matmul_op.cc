@@ -96,9 +96,9 @@ struct LaunchMatMul<GPUDevice, T, true /* USE_CUBLAS */> {
     // We want the output to be in row-major, so we can compute
     // C' = B' x A' (' stands for transpose)
     bool blas_launch_status =
-        stream->ThenBlasGemm(blas_transpose_b, blas_transpose_a, n, m, k, 1.0f,
+        stream->ThenBlasGemm(blas_transpose_b, blas_transpose_a, n, m, k, T(1.0),
                              b_ptr, transpose_b ? k : n, a_ptr,
-                             transpose_a ? m : k, 0.0f, &c_ptr, n)
+                             transpose_a ? m : k, T(0.0), &c_ptr, n)
             .ok();
     if (!blas_launch_status) {
       ctx->SetStatus(errors::Internal(
@@ -109,17 +109,17 @@ struct LaunchMatMul<GPUDevice, T, true /* USE_CUBLAS */> {
   }
 };
 
-template <typename T>
-struct LaunchMatMul<GPUDevice, T, false /* USE_CUBLAS */> {
-  static void launch(
-      OpKernelContext* ctx, OpKernel* kernel, const Tensor& a, const Tensor& b,
-      const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair,
-      Tensor* out) {
-    functor::MatMulFunctor<GPUDevice, T>()(ctx->eigen_device<GPUDevice>(),
-                                           out->matrix<T>(), a.matrix<T>(),
-                                           b.matrix<T>(), dim_pair);
-  }
-};
+// template <typename T>
+// struct LaunchMatMul<GPUDevice, T, false /* USE_CUBLAS */> {
+//   static void launch(
+//       OpKernelContext* ctx, OpKernel* kernel, const Tensor& a, const Tensor& b,
+//       const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair,
+//       Tensor* out) {
+//     functor::MatMulFunctor<GPUDevice, T>()(ctx->eigen_device<GPUDevice>(),
+//                                            out->matrix<T>(), a.matrix<T>(),
+//                                            b.matrix<T>(), dim_pair);
+//   }
+// };
 
 #endif  // GOOGLE_CUDA
 
@@ -212,9 +212,10 @@ struct MatMulFunctor<CPUDevice, T> {
                               .TypeConstraint<T>("T")                          \
                               .Label("cublas"),                                \
                           MatMulOp<GPUDevice, T, true /* cublas */>);          \
-  REGISTER_KERNEL_BUILDER(                                                     \
-      Name("MatMul").Device(DEVICE_GPU).TypeConstraint<T>("T").Label("eigen"), \
-      MatMulOp<GPUDevice, T, false /* cublas */>)
+  //  Eigen's matrix-mul stuff is broken for doubles, just use cublas
+  //    REGISTER_KERNEL_BUILDER(                                                     \
+  //     Name("MatMul").Device(DEVICE_GPU).TypeConstraint<T>("T").Label("eigen"), \
+  //     MatMulOp<GPUDevice, T, false /* cublas */>)
 
 REGISTER_CPU(float);
 REGISTER_CPU(double);
@@ -222,7 +223,7 @@ REGISTER_CPU(int32);
 REGISTER_CPU(complex64);
 #if GOOGLE_CUDA
 REGISTER_GPU(float);
-// REGISTER_GPU(double);
+REGISTER_GPU(double);
 #endif  // GOOGLE_CUDA
 
 }  // namespace tensorflow

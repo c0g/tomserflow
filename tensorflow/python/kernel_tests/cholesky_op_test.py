@@ -22,7 +22,7 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
-
+#TODO: check if built with GPU
 class CholeskyOpTest(tf.test.TestCase):
 
   def _verifyCholeskyBase(self, sess, x, chol, verification):

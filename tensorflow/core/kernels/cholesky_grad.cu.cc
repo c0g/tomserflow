@@ -1,7 +1,6 @@
 #if GOOGLE_CUDA
 #define EIGEN_USE_GPU
 
-// #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/kernels/cuda_matrix_helper_impl.h"
 typedef Eigen::GpuDevice GPUDevice;
 
