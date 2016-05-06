@@ -52,7 +52,10 @@ import pipes
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
-CPU_COMPILER = ('/usr/bin/gcc')
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+CPU_COMPILER = ('/usr/local/bin/gcc-5')
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
@@ -60,7 +63,10 @@ CPU_COMPILER = ('/usr/bin/gcc')
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
-GCC_HOST_COMPILER_PATH = ('/usr/bin/gcc')
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+GCC_HOST_COMPILER_PATH = ('/usr/local/bin/gcc-5')
 
 CURRENT_DIR = os.path.dirname(sys.argv[0])
 NVCC_PATH = CURRENT_DIR + '/../../../cuda/bin/nvcc'
@@ -269,7 +275,10 @@ def InvokeNvcc(argv, log=False):
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
-  supported_cuda_compute_capabilities = ["3.0", "3.5", "5.2",]
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  supported_cuda_compute_capabilities = ["3.0",]
   nvccopts = ''
   for capability in supported_cuda_compute_capabilities:
     capability = capability.replace('.', '')

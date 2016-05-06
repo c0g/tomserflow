@@ -1,1 +1,1 @@
-/usr/local/cuda-7.5/extras/CUPTI/include/cupti_nvtx_cbid.h
+/usr/local/cuda/extras/CUPTI/include/cupti_nvtx_cbid.h
