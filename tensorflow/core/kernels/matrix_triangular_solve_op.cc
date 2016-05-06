@@ -191,14 +191,20 @@ class MatrixTriangularSolveOpGPU
 
     // Copy b into output (cublas works inplace)
     uint64 belems = b_in_matrix_shape.num_elements();
-    stream->ThenMemcpyD2D(&cptr, bptr, sizeof(T) * belems);
-
+    bool copy_status = stream->ThenMemcpyD2D(&cptr, bptr, sizeof(T) * belems).ok();
+    if (!copy_status) {
+      context->SetStatus(errors::Internal("Failed to copy B into output before TRSM"));
+    }
+    // LOG(INFO) << copy_status;
+    for (int i = 0; i < 50; ++i) std::cout << "*";
+    std::cout << std::endl;
+    std::cout << copy_status << std::endl;
     UpLo uplo;
     Trans trans;
     if (lower_) {
-      uplo = UpLo::kLower;
-    } else {
       uplo = UpLo::kUpper;
+    } else {
+      uplo = UpLo::kLower;
     }
     if (adjoint_) {
       trans = Trans::kTranspose;
@@ -209,15 +215,23 @@ class MatrixTriangularSolveOpGPU
     uint64 ldb = b_in_matrix_shape.dim_size(1);
     uint64 cublas_m = b_in_matrix_shape.dim_size(1);
     uint64 cublas_n = b_in_matrix_shape.dim_size(0);
-    stream->ThenBlasTrsm(
+    T* boop;
+    bool blas_launch_status = stream->ThenBlasTrsm(
       perftools::gputools::blas::Side::kRight,
       uplo, trans, 
       perftools::gputools::blas::Diagonal::kNonUnit,
       cublas_m, cublas_n, 1.0, 
       aptr, lda,
-      &bptr, ldb
-    );
-    stream->BlockHostUntilDone();
+      &cptr,ldb
+    ).ok();
+    // LOG(INFO) << blas_launch_status;
+    if (!blas_launch_status) {
+      context->SetStatus(errors::Internal(
+          "Blas TRSM launch failed : a.shape=(", a_in_matrix_shape.dim_size(0), ", ",
+          a_in_matrix_shape.dim_size(1), "), b.shape=(", b_in_matrix_shape.dim_size(0), ", ", 
+          b_in_matrix_shape.dim_size(1),"), m=", cublas_m, ", n=", cublas_n, ")"));
+    }
+    
   }
 
  private:
