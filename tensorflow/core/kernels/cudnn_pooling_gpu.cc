@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/core/kernels/conv_2d.h"
 #include "tensorflow/core/kernels/conv_3d.h"
 #include "tensorflow/core/kernels/conv_ops_gpu.h"
+#include <array>
 
 typedef Eigen::GpuDevice GPUDevice;
 

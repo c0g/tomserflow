@@ -701,6 +701,13 @@ struct CudaVersion {
 // Unofficial setting. DO NOT SUBMIT!!!
 // Unofficial setting. DO NOT SUBMIT!!!
 // Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
+// Unofficial setting. DO NOT SUBMIT!!!
 std::vector<CudaVersion> supported_cuda_compute_capabilities = {CudaVersion("3.0"),};
 
 }  // namespace

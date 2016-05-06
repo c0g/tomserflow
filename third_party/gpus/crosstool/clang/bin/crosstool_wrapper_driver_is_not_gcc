@@ -58,7 +58,21 @@ import pipes
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
 CPU_COMPILER = ('/usr/bin/gcc')
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
@@ -76,7 +90,7 @@ GCC_HOST_COMPILER_PATH = ('/usr/bin/gcc')
 
 CURRENT_DIR = os.path.dirname(sys.argv[0])
 NVCC_PATH = CURRENT_DIR + '/../../../cuda/bin/nvcc'
-LLVM_HOST_COMPILER_PATH = ('/usr/bin/gcc')
+LLVM_HOST_COMPILER_PATH = ('/usr/local/bin/clang-3.7')
 PREFIX_DIR = os.path.dirname(GCC_HOST_COMPILER_PATH)
 
 def Log(s):
@@ -276,6 +290,13 @@ def InvokeNvcc(argv, log=False):
 
   # "configure" uses the specific format to substitute the following string.
   # If you change it, make sure you modify "configure" as well.
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
+  # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
