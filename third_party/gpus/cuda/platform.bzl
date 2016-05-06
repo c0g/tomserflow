@@ -1,5 +1,5 @@
 CUDA_VERSION = "7.5"
-CUDNN_VERSION = "5"
+CUDNN_VERSION = ""
 PLATFORM = "Darwin"
 
 def cuda_sdk_version():
