@@ -29,7 +29,7 @@ namespace tensorflow {
 		// Index of diag is thread_idx, 
 		// index of target is: thread_idx * (prod(ranks) + 1)
 		template <typename T>
-		__global__ void cu_set_diag(const size_t N, const size_t prank, 
+		__global__ void cu_set_diag(const uint64 N, 
 										const T* diag, T* tensor) {
 			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
 			if (idx < N) {
@@ -44,7 +44,7 @@ namespace tensorflow {
 		// Index of source is: thread_idx * (prod(ranks) + 1)
 		// index of target is: thread_idx
 		template <typename T>
-		__global__ void cu_get_diag(const size_t N, const size_t prank, 
+		__global__ void cu_get_diag(const uint64 N, 
 										const T* tensor, T* diag) {
 			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
 			if (idx < N) {
@@ -54,7 +54,6 @@ namespace tensorflow {
 			}
 		}
 	}// namespace
-	
 	namespace functor {
 
 		template <typename T>
@@ -66,34 +65,32 @@ namespace tensorflow {
 		template<typename T>
 		struct SetDiag<Eigen::GpuDevice, T>{
 		    void operator()(const Eigen::GpuDevice& d, 
-		    	size_t N, size_t prank, const T* diag, T* tensor) {
+		    	size_t N, const T* diag, T* tensor) {
 		    	const size_t tpb = 256;
 		    	const size_t nblock = tpb / N + 1;
-		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, diag, tensor);
+		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, diag, tensor);
 		    }
 		};
 		template<typename T>
 		struct GetDiag<Eigen::GpuDevice, T>{
 		    void operator()(const Eigen::GpuDevice& d, 
-		    	size_t N, size_t prank, const T* tensor, T* diag)  {
+		    	size_t N, const T* tensor, T* diag)  {
 		    	const size_t tpb = 256;
 		    	const size_t nblock = tpb / N + 1;
-		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, tensor, diag);
+		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, tensor, diag);
 		    }
 		};
 	} // functor
-template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, float>;							
-template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, float>;
-template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, double>;								
-template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, double>;
-template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int32>;								
-template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int32>;
-template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int64>;								
-template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int64>;
-template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, float>;	
-template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, double>;	
-template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int32>;	
-template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int64>;	
-}
-
-
+template struct functor::GetDiag<Eigen::GpuDevice, float>;							
+template struct functor::SetDiag<Eigen::GpuDevice, float>;
+template struct functor::GetDiag<Eigen::GpuDevice, double>;								
+template struct functor::SetDiag<Eigen::GpuDevice, double>;
+template struct functor::GetDiag<Eigen::GpuDevice, int32>;								
+template struct functor::SetDiag<Eigen::GpuDevice, int32>;
+template struct functor::GetDiag<Eigen::GpuDevice, int64>;								
+template struct functor::SetDiag<Eigen::GpuDevice, int64>;
+template struct functor::SetZeroFunctor<Eigen::GpuDevice, float>;	
+template struct functor::SetZeroFunctor<Eigen::GpuDevice, double>;	
+template struct functor::SetZeroFunctor<Eigen::GpuDevice, int32>;	
+template struct functor::SetZeroFunctor<Eigen::GpuDevice, int64>;	
+}//tensorflow 

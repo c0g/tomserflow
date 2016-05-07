@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 // See docs in ../ops/array_ops.cc
+#include "tensorflow/core/kernels/diag_op.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/register_types.h"
@@ -36,9 +37,9 @@ namespace tensorflow {
     };
 
     template<typename T>
-    struct SetDiag {
+    struct SetDiag<CPUDevice, T> {
         void operator()(const CPUDevice& d, 
-          size_t N, const T* diag, T* tensor) {
+          uint64 N, const T* diag, T* tensor) {
             for (uint64 idx = 0; idx < N; ++idx) {
               uint64 tidx = idx * (N + 1);
               tensor[tidx] = diag[idx];
@@ -46,10 +47,10 @@ namespace tensorflow {
         }
     };
     template<typename T>
-    struct operator() {
+    struct GetDiag<CPUDevice, T> {
         void operator()(const CPUDevice& d, 
-          size_t N, const T* diag, T* tensor) {
-          for (uint64t idx = 0; idx < N; ++ idx) {
+          uint64 N, const T* diag, T* tensor) {
+          for (uint64 idx = 0; idx < N; ++ idx) {
             uint64 tidx = idx * (N + 1);
             diag[idx] = tensor[idx];
           }
@@ -72,7 +73,7 @@ class DiagOp : public OpKernel {
                 errors::InvalidArgument("Expected 1 <= dims <= 3, got shape ",
                                         diagonal.shape().DebugString()));
     uint64 N = 1;
-    for (uint64 idx = 0; idx < diagonal.num_dims(); ++idX){
+    for (uint64 idx = 0; idx < diagonal.dims(); ++idx){
       N *= diagonal.dim_size(idx);
     }
     TensorShape out_shape;
@@ -89,18 +90,13 @@ class DiagOp : public OpKernel {
     const T* diag_ptr = diagonal.flat<T>().data();
     T* tensor_ptr = output_tensor->flat<T>().data();
     functor::SetDiag<Device, T> diag;
-    diag(N, diag_ptr, tensor_ptr);
+    diag(context->eigen_device<Device>(), N, diag_ptr, tensor_ptr);
   }
 };
 
 #define REGISTER_DIAGOP(T) \
   REGISTER_KERNEL_BUILDER( \
       Name("Diag").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagOp<CPUDevice, T>);
-  #ifdef GOOGLE_CUDA
-  REGISTER_KERNEL_BUILDER( \
-      Name("Diag").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagOp<GPUDevice, T>);
-  #endif
-
 REGISTER_DIAGOP(double);
 REGISTER_DIAGOP(float);
 REGISTER_DIAGOP(int32);
@@ -108,14 +104,24 @@ REGISTER_DIAGOP(int64);
 
 #undef REGISTER_DIAGOP
 
+#define REGISTER_DIAGOP_GPU(T) \
+  REGISTER_KERNEL_BUILDER( \
+      Name("Diag").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagOp<GPUDevice, T>);
+REGISTER_DIAGOP_GPU(double);
+REGISTER_DIAGOP_GPU(float);
+REGISTER_DIAGOP_GPU(int32);
+REGISTER_DIAGOP_GPU(int64);
+
+#undef REGISTER_DIAGOP_GPU
+
 
 // Generate the diagonal tensor with the diagonal set to the input tensor.
 // It only allows rank 2, 4, or 6 input tensor, so the output tensor is 
 // rank 1, 2, or 3.
 template <typename Device, typename T>
 class DiagPartOp : public OpKernel {
- public:
-  explicit DiagPartOp(OpKernelConstruction* context) : OpKernel(context) {}
+    public:
+ explicit DiagPartOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     const Tensor& tensor = context->input(0);
@@ -149,17 +155,13 @@ class DiagPartOp : public OpKernel {
     const T* tensor_ptr = tensor.flat<T>().data();
     T* diag_ptr = output->flat<T>().data();
     functor::GetDiag<Device, T> diag;
-    diag(N, tensor_ptr, diag_ptr);
+    diag(context->eigen_device<Device>(), N, tensor_ptr, diag_ptr);
   }
 };
 
 #define REGISTER_DIAGPARTOP(T) \
   REGISTER_KERNEL_BUILDER( \
       Name("DiagPart").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
-  #ifdef GOOGLE_CUDA
-  REGISTER_KERNEL_BUILDER( \
-      Name("DiagPart").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
-  #endif
 
 REGISTER_DIAGPARTOP(double);
 REGISTER_DIAGPARTOP(float);
@@ -167,5 +169,17 @@ REGISTER_DIAGPARTOP(int32);
 REGISTER_DIAGPARTOP(int64);
 
 #undef REGISTER_DIAGPARTOP
-  
+
+
+#define REGISTER_GPU_DIAGPARTOP(T) \
+  REGISTER_KERNEL_BUILDER( \
+      Name("DiagPart").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
+
+REGISTER_GPU_DIAGPARTOP(double);
+REGISTER_GPU_DIAGPARTOP(float);
+REGISTER_GPU_DIAGPARTOP(int32);
+REGISTER_GPU_DIAGPARTOP(int64);
+
+#undef REGISTER_GPU_DIAGPARTOP
+
 }  // namespace tensorflow
