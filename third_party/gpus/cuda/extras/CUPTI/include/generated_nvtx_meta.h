@@ -1,1 +1,1 @@
-/usr/local/cuda/extras/CUPTI/include/generated_nvtx_meta.h
+/usr/local/cuda-7.5/extras/CUPTI/include/generated_nvtx_meta.h

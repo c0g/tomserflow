@@ -1,1 +1,1 @@
-/usr/local/cuda/extras/CUPTI/include/cuda_stdint.h
+/usr/local/cuda-7.5/extras/CUPTI/include/cuda_stdint.h
