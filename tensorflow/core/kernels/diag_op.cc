@@ -19,60 +19,47 @@ limitations under the License.
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/logging.h"
+#include "tensorflow/core/kernels/fill_functor.h"
 
+typedef Eigen::ThreadPoolDevice CPUDevice;
+typedef Eigen::GpuDevice GPUDevice;
 namespace tensorflow {
-namespace {
-template <typename T, size_t NumDims, size_t DoubleNumDims>
-class DiagonalGenerator {
- public:
-  explicit DiagonalGenerator(const Tensor& diagonal) : diagonal_(diagonal) {
-    static_assert(DoubleNumDims == 2 * NumDims,
-                  "The second size must be the double of the first size.");
-    CHECK_EQ(diagonal.dims(), NumDims);
-  }
-  T operator()(
-      const Eigen::array<Eigen::DenseIndex, DoubleNumDims>& coordinates) const {
-    Eigen::array<Eigen::DenseIndex, NumDims> index;
-    for (size_t i = 0; i < NumDims; ++i) {
-      if (coordinates[i] != coordinates[NumDims + i]) {
-        return T(0);
+  namespace functor {
+
+    // Partial specialization of SetZeroFunctor<Device=CPUDevice, T>.
+    template <typename T>
+    struct SetZeroFunctor<CPUDevice, T> {
+      void operator()(const CPUDevice& d, typename TTypes<T>::Flat out) {
+        out.device(d) = out.constant(T());
       }
-      index[i] = coordinates[i];
-    }
-    return diagonal_.tensor<T, NumDims>()(index);
-  }
+    };
 
- private:
-  Tensor diagonal_;
-};
-
-template <typename T, size_t NumDims>
-class DiagonalExtractor {
- public:
-  explicit DiagonalExtractor(const Tensor& tensor) : tensor_(tensor) {
-    CHECK_EQ(tensor.dims(), 2 * NumDims);
-  }
-  T operator()(const Eigen::array<Eigen::Index, NumDims>& coordinates) const {
-    Eigen::array<Eigen::Index, 2 * NumDims> index;
-    for (size_t j = 0; j < NumDims; ++j){
-      index[j] = coordinates[j];
-    }
-    for (size_t j = NumDims; j < 2 * NumDims; ++j){
-      index[j] = index[j - NumDims];
-    }
-    return tensor_.tensor<T, 2 * NumDims>()(index);
-  }
-
- private:
-  Tensor tensor_;
-};
-  
-}  // namespace
+    template<typename T>
+    struct SetDiag {
+        void operator()(const CPUDevice& d, 
+          size_t N, const T* diag, T* tensor) {
+            for (uint64 idx = 0; idx < N; ++idx) {
+              uint64 tidx = idx * (N + 1);
+              tensor[tidx] = diag[idx];
+            }
+        }
+    };
+    template<typename T>
+    struct operator() {
+        void operator()(const CPUDevice& d, 
+          size_t N, const T* diag, T* tensor) {
+          for (uint64t idx = 0; idx < N; ++ idx) {
+            uint64 tidx = idx * (N + 1);
+            diag[idx] = tensor[idx];
+          }
+        }
+    };
+  } // functor
 
 // Generate the diagonal tensor with the diagonal set to the input tensor.
 // It only allows up to rank 3 input tensor, so the output tensor is up to
 // rank 6.
-template <typename T>
+template <typename Device, typename T>
 class DiagOp : public OpKernel {
  public:
   explicit DiagOp(OpKernelConstruction* context) : OpKernel(context) {}
@@ -83,6 +70,10 @@ class DiagOp : public OpKernel {
     OP_REQUIRES(context, 1 <= num_dims && num_dims <= 3,
                 errors::InvalidArgument("Expected 1 <= dims <= 3, got shape ",
                                         diagonal.shape().DebugString()));
+    uint64 N = 1;
+    for (uint64 idx = 0; idx < diagonal.num_dims(); ++idX){
+      N *= diagonal.dim_size(idx);
+    }
     TensorShape out_shape;
     for (int i = 0; i < num_dims; ++i) {
       out_shape.AddDim(diagonal.dim_size(i));
@@ -93,30 +84,21 @@ class DiagOp : public OpKernel {
     Tensor* output_tensor = nullptr;
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, out_shape, &output_tensor));
-    switch (num_dims) {
-      case 1:
-        output_tensor->tensor<T, 2>() = output_tensor->tensor<T, 2>().generate(
-            DiagonalGenerator<T, 1, 2>(diagonal));
-        break;
-      case 2:
-        output_tensor->tensor<T, 4>() = output_tensor->tensor<T, 4>().generate(
-            DiagonalGenerator<T, 2, 4>(diagonal));
-        break;
-      case 3:
-        output_tensor->tensor<T, 6>() = output_tensor->tensor<T, 6>().generate(
-            DiagonalGenerator<T, 3, 6>(diagonal));
-        break;
-      default:
-        context->SetStatus(errors::Unimplemented(
-            "Diagonal of rank ", num_dims, " tensor is not supported yet."));
-        return;
-    }
+
+    const T* diag_ptr = diagonal.flat<T>().data();
+    T* tensor_ptr = output_tensor->flat<T>().data();
+    functor::SetDiag<Device, T> diag;
+    diag(N, diag_ptr, tensor_ptr);
   }
 };
 
 #define REGISTER_DIAGOP(T) \
   REGISTER_KERNEL_BUILDER( \
-      Name("Diag").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagOp<T>)
+      Name("Diag").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagOp<CPUDevice, T>);
+  #ifdef GOOGLE_CUDA
+  REGISTER_KERNEL_BUILDER( \
+      Name("Diag").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagOp<GPUDevice, T>);
+  #endif
 
 REGISTER_DIAGOP(double);
 REGISTER_DIAGOP(float);
@@ -129,7 +111,7 @@ REGISTER_DIAGOP(int64);
 // Generate the diagonal tensor with the diagonal set to the input tensor.
 // It only allows rank 2, 4, or 6 input tensor, so the output tensor is 
 // rank 1, 2, or 3.
-template <typename T>
+template <typename Device, typename T>
 class DiagPartOp : public OpKernel {
  public:
   explicit DiagPartOp(OpKernelConstruction* context) : OpKernel(context) {}
@@ -159,30 +141,24 @@ class DiagPartOp : public OpKernel {
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, out_shape, &output));
 
-    switch (num_dims) {
-      case 2:
-        output->tensor<T, 1>() = output->tensor<T, 1>().generate(
-          DiagonalExtractor<T, 1>(tensor));
-        break; 
-      case 4:
-        output->tensor<T, 2>() = output->tensor<T, 2>().generate(
-          DiagonalExtractor<T, 2>(tensor));
-        break;
-      case 6:
-        output->tensor<T, 3>() = output->tensor<T, 3>().generate(
-          DiagonalExtractor<T, 3>(tensor));
-        break;      
-      default:
-        context->SetStatus(errors::Unimplemented(
-          "Diagonal of rank ", num_dims, " tensor is not supported yet."));
-        return;
+    uint64 N = 1;
+    for (uint64 idx = 0; idx < out_dims; ++idx) {
+      N *= out_shape.dim_size(idx);
     }
+    const T* tensor_ptr = tensor.flat<T>().data();
+    T* diag_ptr = output->flat<T>().data();
+    functor::GetDiag<Device, T> diag;
+    diag(N, tensor_ptr, diag_ptr);
   }
 };
 
 #define REGISTER_DIAGPARTOP(T) \
   REGISTER_KERNEL_BUILDER( \
-      Name("DiagPart").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagPartOp<T>)
+      Name("DiagPart").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
+  #ifdef GOOGLE_CUDA
+  REGISTER_KERNEL_BUILDER( \
+      Name("DiagPart").Device(DEVICE_GPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
+  #endif
 
 REGISTER_DIAGPARTOP(double);
 REGISTER_DIAGPARTOP(float);

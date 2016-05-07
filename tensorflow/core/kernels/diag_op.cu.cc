@@ -1,99 +1,99 @@
-// /* Copyright 2015 Google Inc. All Rights Reserved.
+/* Copyright 2015 Google Inc. All Rights Reserved.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-//     http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// ==============================================================================*/
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
 
-// // See docs in ../ops/array_ops.cc
-// // 
-// #define EIGEN_USE_GPU
-// #include "tensorflow/core/kernels/diag_op.h"
-// #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-// #include "tensorflow/core/framework/types.h"
-// #include "tensorflow/core/kernels/fill_functor.h"
+// See docs in ../ops/array_ops.cc
+// 
+#define EIGEN_USE_GPU
+#include "tensorflow/core/kernels/diag_op.h"
+#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tensorflow/core/framework/types.h"
+#include "tensorflow/core/kernels/fill_functor.h"
 
-// namespace tensorflow {
-// 	namespace {
-// 		// sets N items from diag to the diagonal of target.
-// 		// N is product of input ranks
-// 		// prank is product of output ranks
-// 		// Index of diag is thread_idx, 
-// 		// index of target is: thread_idx * (prod(ranks) + 1)
-// 		template <typename T>
-// 		__global__ void cu_set_diag(const size_t N, const size_t prank, 
-// 										const T* diag, T* tensor) {
-// 			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
-// 			if (idx < N) {
-// 				size_t didx = idx;
-// 				size_t tidx = idx * (N + 1);
-// 				tensor[tidx] = diag[didx];
-// 			}
-// 		}
-// 		// sets N items from the diagonal of source tensor to diagonal.
-// 		// N is product of diagonal tensor ranks
-// 		// prank is product of the source tensor ranks
-// 		// Index of source is: thread_idx * (prod(ranks) + 1)
-// 		// index of target is: thread_idx
-// 		template <typename T>
-// 		__global__ void cu_get_diag(const size_t N, const size_t prank, 
-// 										const T* tensor, T* diag) {
-// 			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
-// 			if (idx < N) {
-// 				size_t didx = idx;
-// 				size_t tidx = idx * (N + 1);
-// 				diag[didx] = tensor[tidx];
-// 			}
-// 		}
-// 	}// namespace
+namespace tensorflow {
+	namespace {
+		// sets N items from diag to the diagonal of target.
+		// N is product of input ranks
+		// prank is product of output ranks
+		// Index of diag is thread_idx, 
+		// index of target is: thread_idx * (prod(ranks) + 1)
+		template <typename T>
+		__global__ void cu_set_diag(const size_t N, const size_t prank, 
+										const T* diag, T* tensor) {
+			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+			if (idx < N) {
+				size_t didx = idx;
+				size_t tidx = idx * (N + 1);
+				tensor[tidx] = diag[didx];
+			}
+		}
+		// sets N items from the diagonal of source tensor to diagonal.
+		// N is product of diagonal tensor ranks
+		// prank is product of the source tensor ranks
+		// Index of source is: thread_idx * (prod(ranks) + 1)
+		// index of target is: thread_idx
+		template <typename T>
+		__global__ void cu_get_diag(const size_t N, const size_t prank, 
+										const T* tensor, T* diag) {
+			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+			if (idx < N) {
+				size_t didx = idx;
+				size_t tidx = idx * (N + 1);
+				diag[didx] = tensor[tidx];
+			}
+		}
+	}// namespace
 	
-// 	namespace functor {
+	namespace functor {
 
-// 		template <typename T>
-// 		struct SetZeroFunctor<Eigen::GpuDevice, T> {
-// 		  void operator()(const Eigen::GpuDevice& d, typename TTypes<T>::Flat out) {
-// 		    To32Bit(out).device(d) = To32Bit(out).constant(T(0));
-// 		  }
-// 		};
-// 		template<typename T>
-// 		struct SetDiag<Eigen::GpuDevice, T>{
-// 		    void operator()(const Eigen::GpuDevice& d, 
-// 		    	size_t N, size_t prank, const T* diag, T* tensor) {
-// 		    	const size_t tpb = 256;
-// 		    	const size_t nblock = tpb / N + 1;
-// 		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, diag, tensor);
-// 		    }
-// 		};
-// 		template<typename T>
-// 		struct GetDiag<Eigen::GpuDevice, T>{
-// 		    void operator()(const Eigen::GpuDevice& d, 
-// 		    	size_t N, size_t prank, const T* tensor, T* diag)  {
-// 		    	const size_t tpb = 256;
-// 		    	const size_t nblock = tpb / N + 1;
-// 		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, tensor, diag);
-// 		    }
-// 		};
-// 	} // functor
-// template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, float>;							
-// template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, float>;
-// template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, double>;								
-// template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, double>;
-// template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int32>;								
-// template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int32>;
-// template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int64>;								
-// template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int64>;
-// template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, float>;	
-// template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, double>;	
-// template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int32>;	
-// template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int64>;	
-// }
+		template <typename T>
+		struct SetZeroFunctor<Eigen::GpuDevice, T> {
+		  void operator()(const Eigen::GpuDevice& d, typename TTypes<T>::Flat out) {
+		    To32Bit(out).device(d) = To32Bit(out).constant(T(0));
+		  }
+		};
+		template<typename T>
+		struct SetDiag<Eigen::GpuDevice, T>{
+		    void operator()(const Eigen::GpuDevice& d, 
+		    	size_t N, size_t prank, const T* diag, T* tensor) {
+		    	const size_t tpb = 256;
+		    	const size_t nblock = tpb / N + 1;
+		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, diag, tensor);
+		    }
+		};
+		template<typename T>
+		struct GetDiag<Eigen::GpuDevice, T>{
+		    void operator()(const Eigen::GpuDevice& d, 
+		    	size_t N, size_t prank, const T* tensor, T* diag)  {
+		    	const size_t tpb = 256;
+		    	const size_t nblock = tpb / N + 1;
+		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, prank, tensor, diag);
+		    }
+		};
+	} // functor
+template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, float>;							
+template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, float>;
+template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, double>;								
+template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, double>;
+template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int32>;								
+template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int32>;
+template struct tensorflow::functor::GetDiag<Eigen::GpuDevice, int64>;								
+template struct tensorflow::functor::SetDiag<Eigen::GpuDevice, int64>;
+template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, float>;	
+template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, double>;	
+template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int32>;	
+template struct tensorflow::functor::SetZeroFunctor<Eigen::GpuDevice, int64>;	
+}
 
 
