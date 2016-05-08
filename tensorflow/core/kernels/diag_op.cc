@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
+#define EIGEN_USE_THREADS
 // See docs in ../ops/array_ops.cc
 #include "tensorflow/core/kernels/diag_op.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
@@ -49,10 +49,10 @@ namespace tensorflow {
     template<typename T>
     struct GetDiag<CPUDevice, T> {
         void operator()(const CPUDevice& d, 
-          uint64 N, const T* diag, T* tensor) {
+          uint64 N, const T* tensor, T* diag) {
           for (uint64 idx = 0; idx < N; ++ idx) {
             uint64 tidx = idx * (N + 1);
-            diag[idx] = tensor[idx];
+            diag[idx] = tensor[tidx];
           }
         }
     };
@@ -161,7 +161,7 @@ class DiagPartOp : public OpKernel {
 
 #define REGISTER_DIAGPARTOP(T) \
   REGISTER_KERNEL_BUILDER( \
-      Name("DiagPart").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagPartOp<GPUDevice, T>);
+      Name("DiagPart").Device(DEVICE_CPU).TypeConstraint<T>("T"), DiagPartOp<CPUDevice, T>);
 
 REGISTER_DIAGPARTOP(double);
 REGISTER_DIAGPARTOP(float);

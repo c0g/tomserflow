@@ -31,10 +31,10 @@ namespace tensorflow {
 		template <typename T>
 		__global__ void cu_set_diag(const uint64 N, 
 										const T* diag, T* tensor) {
-			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+			uint64 idx = threadIdx.x + blockDim.x * blockIdx.x;
 			if (idx < N) {
-				size_t didx = idx;
-				size_t tidx = idx * (N + 1);
+				uint64 didx = idx;
+				uint64 tidx = idx * (N + 1);
 				tensor[tidx] = diag[didx];
 			}
 		}
@@ -46,10 +46,10 @@ namespace tensorflow {
 		template <typename T>
 		__global__ void cu_get_diag(const uint64 N, 
 										const T* tensor, T* diag) {
-			size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+			uint64 idx = threadIdx.x + blockDim.x * blockIdx.x;
 			if (idx < N) {
-				size_t didx = idx;
-				size_t tidx = idx * (N + 1);
+				uint64 didx = idx;
+				uint64 tidx = idx * (N + 1);
 				diag[didx] = tensor[tidx];
 			}
 		}
@@ -65,18 +65,18 @@ namespace tensorflow {
 		template<typename T>
 		struct SetDiag<Eigen::GpuDevice, T>{
 		    void operator()(const Eigen::GpuDevice& d, 
-		    	size_t N, const T* diag, T* tensor) {
-		    	const size_t tpb = 256;
-		    	const size_t nblock = tpb / N + 1;
+		    	uint64 N, const T* diag, T* tensor) {
+		    	const uint64 tpb = 256;
+		    	const uint64 nblock = tpb / N + 1;
 		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, diag, tensor);
 		    }
 		};
 		template<typename T>
 		struct GetDiag<Eigen::GpuDevice, T>{
 		    void operator()(const Eigen::GpuDevice& d, 
-		    	size_t N, const T* tensor, T* diag)  {
-		    	const size_t tpb = 256;
-		    	const size_t nblock = tpb / N + 1;
+		    	uint64 N, const T* tensor, T* diag)  {
+		    	const uint64 tpb = 256;
+		    	const uint64 nblock = tpb / N + 1;
 		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, tensor, diag);
 		    }
 		};

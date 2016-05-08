@@ -195,10 +195,6 @@ class MatrixTriangularSolveOpGPU
     if (!copy_status) {
       context->SetStatus(errors::Internal("Failed to copy B into output before TRSM"));
     }
-    // LOG(INFO) << copy_status;
-    for (int i = 0; i < 50; ++i) std::cout << "*";
-    std::cout << std::endl;
-    std::cout << copy_status << std::endl;
     UpLo uplo;
     Trans trans;
     if (lower_) {
@@ -215,7 +211,6 @@ class MatrixTriangularSolveOpGPU
     uint64 ldb = b_in_matrix_shape.dim_size(1);
     uint64 cublas_m = b_in_matrix_shape.dim_size(1);
     uint64 cublas_n = b_in_matrix_shape.dim_size(0);
-    T* boop;
     bool blas_launch_status = stream->ThenBlasTrsm(
       perftools::gputools::blas::Side::kRight,
       uplo, trans, 
