@@ -1,1 +1,1 @@
-/usr/local/cuda-7.5/extras/CUPTI/include/GL/glew.h
+/usr/local/cuda/extras/CUPTI/include/GL/glew.h

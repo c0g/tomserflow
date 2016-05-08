@@ -89,6 +89,8 @@ class DiagOp : public OpKernel {
 
     const T* diag_ptr = diagonal.flat<T>().data();
     T* tensor_ptr = output_tensor->flat<T>().data();
+    functor::SetZeroFunctor<Device, T> zero;
+    zero(context->eigen_device<Device>(), output_tensor->flat<T>());
     functor::SetDiag<Device, T> diag;
     diag(context->eigen_device<Device>(), N, diag_ptr, tensor_ptr);
   }
@@ -154,6 +156,8 @@ class DiagPartOp : public OpKernel {
     }
     const T* tensor_ptr = tensor.flat<T>().data();
     T* diag_ptr = output->flat<T>().data();
+    functor::SetZeroFunctor<Device, T> zero;
+    zero(context->eigen_device<Device>(), output->flat<T>());
     functor::GetDiag<Device, T> diag;
     diag(context->eigen_device<Device>(), N, tensor_ptr, diag_ptr);
   }

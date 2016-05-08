@@ -104,10 +104,10 @@ class SolverSupport {
   /*     A = L  * L**T,  if UPLO = 'L', */
   /*  where U is an upper triangular matrix and L is lower triangular. */
   virtual bool DoSolverPotrf(Stream *stream, solver::UpperLower uplo, uint64 elem_count, 
-                          DeviceMemory<float> *A, uint64 lda,
+                          DeviceMemory<float> *A, uint64 lda, int * dev_info,
                           ScratchAllocator* scratch_allocator) = 0;
   virtual bool DoSolverPotrf(Stream *stream, solver::UpperLower uplo, uint64 elem_count, 
-                          DeviceMemory<double> *A, uint64 lda,
+                          DeviceMemory<double> *A, uint64 lda, int * dev_info,
                           ScratchAllocator* scratch_allocator) = 0;
 
 
@@ -122,10 +122,10 @@ class SolverSupport {
 // SolverSupport base class.
 #define TENSORFLOW_STREAM_EXECUTOR_GPU_SOLVER_SUPPORT_OVERRIDES                \
   bool DoSolverPotrf(Stream *stream, solver::UpperLower uplo, uint64 elem_count, \
-                          DeviceMemory<float> *A, uint64 lda,                  \
+                          DeviceMemory<float> *A, uint64 lda, int * dev_info,   \
                           ScratchAllocator* scratch_allocator) override;       \
   bool DoSolverPotrf(Stream *stream, solver::UpperLower uplo, uint64 elem_count, \
-                          DeviceMemory<double> *A, uint64 lda,                  \
+                          DeviceMemory<double> *A, uint64 lda, int * dev_info,    \
                           ScratchAllocator* scratch_allocator) override;
 
 }  // namespace solver

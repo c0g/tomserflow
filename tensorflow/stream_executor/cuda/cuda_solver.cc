@@ -222,7 +222,7 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
                           FuncT1 size_func, FuncT2 solve_func,
                           Stream *stream,
                           solver::UpperLower uplo, uint64 elem_count, 
-                          DeviceMemory<T> *A, uint64 lda,
+                          DeviceMemory<T> *A, uint64 lda, int * devinfo_hst,
                           ScratchAllocator *scratch_allocator) {
   int Lwork; // must be int: cusolver expect int point
   if (!DoSolverInternal(size_func, stream,
@@ -236,7 +236,7 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
   DeviceMemory<T> scratch;
   DeviceMemory<int> devinfo;
   std::unique_ptr<TemporaryDeviceMemory<T>> scratch_temp;
-  std::unique_ptr<TemporaryDeviceMemory<T>> devinfo_temp;
+  std::unique_ptr<TemporaryDeviceMemory<int>> devinfo_temp;
 
   uint64 size_scratch = sizeof(T) * Lwork;
   uint64 size_devinfo = sizeof(int);
@@ -252,7 +252,7 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
                         stream->AllocateTemporaryArray<T>(Lwork));
     scratch = DeviceMemory<T>(*scratch_temp->mutable_device_memory());
     SE_ASSIGN_OR_RETURN(devinfo_temp,
-                        stream->AllocateTemporaryArray<T>(Lwork));
+                        stream->AllocateTemporaryArray<int>(1));
     devinfo = DeviceMemory<int>(*devinfo_temp->mutable_device_memory());
   }
 
@@ -261,6 +261,18 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
                         CUDAMemoryMutable(A), lda,
                         CUDAMemoryMutable(&scratch), Lwork,
                         CUDAMemoryMutable(&devinfo));
+
+  port::MutableArraySlice<int> devinfo_hst_wrapper{devinfo_hst, 1};
+  if (!stream->ThenMemcpyD2H(devinfo, devinfo_hst_wrapper).ok()) {
+    return port::Status(port::error::INTERNAL,
+                    "failed in POTRF to copy devinfo back.");
+  }
+  // if (devinfo_host_int!=0) {
+  //   LOG(ERROR) << "failed to run cuSolver POTRF devinfo: "
+  //              << devinfo_host_int;
+  //   return port::Status(port::error::INVALID_ARGUMENT,
+  //                   "POTRF failed with uncholeskyable matrix");
+  // }
   if (ok) {
     return port::Status::OK();
   }
@@ -269,11 +281,11 @@ port::Status CUDASolver::DoSolverPotrfWithScratchInternal(
 } 
 bool CUDASolver::DoSolverPotrf(Stream *stream, 
                           solver::UpperLower uplo, uint64 elem_count,
-                          DeviceMemory<float> *A, uint64 lda,
+                          DeviceMemory<float> *A, uint64 lda, int * dev_info,
                           ScratchAllocator *scratch_allocator) {
   port::Status status = DoSolverPotrfWithScratchInternal(
       dynload::cusolverDnSpotrf_bufferSize, dynload::cusolverDnSpotrf,
-      stream, uplo, elem_count, A, lda, scratch_allocator);
+      stream, uplo, elem_count, A, lda, dev_info, scratch_allocator);
   if (status == port::Status::OK()) {
     return true;
   } else {
@@ -282,11 +294,11 @@ bool CUDASolver::DoSolverPotrf(Stream *stream,
 }
 bool CUDASolver::DoSolverPotrf(Stream *stream, 
                           solver::UpperLower uplo, uint64 elem_count,
-                          DeviceMemory<double> *A, uint64 lda,
+                          DeviceMemory<double> *A, uint64 lda, int * dev_info,
                           ScratchAllocator *scratch_allocator) {
   port::Status status = DoSolverPotrfWithScratchInternal(
       dynload::cusolverDnDpotrf_bufferSize, dynload::cusolverDnDpotrf,
-      stream, uplo, elem_count, A, lda, scratch_allocator);
+      stream, uplo, elem_count, A, lda, dev_info, scratch_allocator);
   if (status == port::Status::OK()) {
     return true;
   } else {

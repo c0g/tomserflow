@@ -384,15 +384,15 @@ class Stream {
   /////////////////
   // SOLVER support
   Stream &ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<float>* A, uint64 lda,
+                      DeviceMemory<float>* A, uint64 lda, int * dev_info,
                       ScratchAllocator* scratch_allocator);
   Stream &ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<double>* A, uint64 lda,
+                      DeviceMemory<double>* A, uint64 lda, int * dev_info,
                       ScratchAllocator* scratch_allocator); 
   Stream &ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<float>* A, uint64 lda); 
+                      DeviceMemory<float>* A, uint64 lda, int * dev_info); 
   Stream &ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<double>* A, uint64 lda); 
+                      DeviceMemory<double>* A, uint64 lda, int * dev_info); 
 
   /////////////////
   // BLAS support

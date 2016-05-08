@@ -90,7 +90,7 @@ class CUDASolver : public solver::SolverSupport {
   port::Status DoSolverPotrfWithScratchInternal(
       FuncT1 size_func, FuncT2 alloc_func, Stream *stream, 
       solver::UpperLower uplo, uint64 elem_count,
-      DeviceMemory<T> *A, uint64 lda,
+      DeviceMemory<T> *A, uint64 lda, int * dev_info,
       ScratchAllocator *scratch_allocator);
 
 

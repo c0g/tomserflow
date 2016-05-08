@@ -177,11 +177,13 @@ namespace functors {
         // Copy from in to out
         Helper::copy(ctx->eigen_device<GPUDevice>(), outMat, inMat);
         CusolverScratchAllocator scratch_allocator(ctx);
-        stream->ThenSolverPotrfWithScratch(perftools::gputools::solver::UpperLower::kUpper, 
-                                M, &outdev, M, &scratch_allocator);
+        int dev_info;
+        bool ok = stream->ThenSolverPotrfWithScratch(
+                      perftools::gputools::solver::UpperLower::kUpper, 
+                      M, &outdev, M, &dev_info, &scratch_allocator).ok();
         Helper::tril(ctx->eigen_device<GPUDevice>(), outMat);
         stream->BlockHostUntilDone();
-        success = true;
+        success = ok && (dev_info == 0);
       }
   };
 } // functors

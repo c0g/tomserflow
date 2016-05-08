@@ -52,7 +52,9 @@ import pipes
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
 CPU_COMPILER = ('/usr/bin/gcc')
+# Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
@@ -269,7 +271,8 @@ def InvokeNvcc(argv, log=False):
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
-  supported_cuda_compute_capabilities = ["3.0", "3.5", "5.2",]
+  # Unofficial setting. DO NOT SUBMIT!!!
+  supported_cuda_compute_capabilities = ["3.0",]
   nvccopts = ''
   for capability in supported_cuda_compute_capabilities:
     capability = capability.replace('.', '')

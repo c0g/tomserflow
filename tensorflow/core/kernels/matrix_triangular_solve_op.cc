@@ -184,8 +184,7 @@ class MatrixTriangularSolveOpGPU
              matrix_index * a_in_matrix_shape.num_elements());
     auto bptr = AsDeviceMemory(b_in.flat<T>().data() +
              matrix_index * b_in_matrix_shape.num_elements());
-    auto cptr = AsDeviceMemory(output->flat<T>().data() +
-             matrix_index * output_matrix_shape.num_elements());
+    auto cptr = AsDeviceMemory(output->flat<T>().data());
 
     auto* stream = context->op_device_context()->stream();
 

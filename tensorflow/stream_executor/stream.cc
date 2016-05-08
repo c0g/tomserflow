@@ -886,30 +886,30 @@ Stream &ThenSolverImpl<Args...>::operator()(
 }
 
 Stream &Stream::ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<float>* A, uint64 lda,
+                      DeviceMemory<float>* A, uint64 lda, int * dev_info,
                       ScratchAllocator* scratch_allocator) {
   VLOG_CALL(PARAM(uplo), PARAM(elem_count), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
-  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<float> *, uint64, 
+  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<float> *, uint64, int*,
       ScratchAllocator*> impl;
   return impl(this, &solver::SolverSupport::DoSolverPotrf, uplo, elem_count,
-    A, lda, scratch_allocator);
+    A, lda, dev_info, scratch_allocator);
 }
 Stream &Stream::ThenSolverPotrfWithScratch(solver::UpperLower uplo, uint64 elem_count,
-                      DeviceMemory<double>* A, uint64 lda,
+                      DeviceMemory<double>* A, uint64 lda, int * dev_info,
                       ScratchAllocator* scratch_allocator) {
   VLOG_CALL(PARAM(uplo), PARAM(elem_count), PARAM(A), PARAM(lda), PARAM(scratch_allocator));
-  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<double> *, uint64, 
+  ThenSolverImpl<solver::UpperLower, uint64, DeviceMemory<double> *, uint64, int*, 
       ScratchAllocator*> impl;
   return impl(this, &solver::SolverSupport::DoSolverPotrf, uplo, elem_count,
-    A, lda, scratch_allocator);
+    A, lda, dev_info, scratch_allocator);
 }
 Stream &Stream::ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count, 
-                      DeviceMemory<float>* A, uint64 lda) {
-  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, nullptr);
+                      DeviceMemory<float>* A, uint64 lda, int * dev_info) {
+  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, dev_info, nullptr);
 }
 Stream &Stream::ThenSolverPotrf(solver::UpperLower uplo, uint64 elem_count, 
-                      DeviceMemory<double>* A, uint64 lda) {
-  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, nullptr);
+                      DeviceMemory<double>* A, uint64 lda, int * dev_info) {
+  return ThenSolverPotrfWithScratch(uplo, elem_count, A, lda, dev_info, nullptr);
 }
 // A functor that implements ThenBlasXXX interfaces, which calls DoBlasXXX
 // functions and logs for errors.
