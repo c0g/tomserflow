@@ -39,7 +39,6 @@ limitations under the License.
 
 #include "tensorflow/core/platform/stream_executor.h"
 
-  //WRONG: should include from ../kernels/ but I don't know how to Bazel
 #include "tensorflow/core/kernels/linalg_ops_common.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/logging.h"
@@ -87,7 +86,7 @@ class CholeskyOp : public UnaryLinearAlgebraOpBase {
   void ComputeMatrix(OpKernelContext* context, int64 matrix_idx, 
         const Tensor& in, const TensorShape& inshape,
         Tensor* out, const TensorShape& outshape) override {
-    OP_REQUIRES(context, inshape.dim_size(0) == in.dim_size(1),
+    OP_REQUIRES(context, inshape.dim_size(0) == inshape.dim_size(1),
                 errors::InvalidArgument("Input matrix must be square."));
     if (inshape.dim_size(0) == 0) {
       // If X is an empty matrix (0 rows, 0 col), X * X' == X.

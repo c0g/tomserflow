@@ -117,6 +117,123 @@ op {
   is_commutative: true
 }
 op {
+  name: "KvsDoVec"
+  input_arg {
+    name: "kvs"
+    description: "Elements of the kronecker vector stack."
+    type_attr: "T"
+    number_attr: "N"
+  }
+  input_arg {
+    name: "vec"
+    description: "Vector."
+    type_attr: "T"
+  }
+  output_arg {
+    name: "product"
+    type_attr: "T"
+  }
+  attr {
+    name: "N"
+    type: "int"
+    has_minimum: true
+    minimum: 2
+  }
+  attr {
+    name: "T"
+    type: "type"
+    allowed_values {
+      list {
+        type: DT_FLOAT
+        type: DT_DOUBLE
+      }
+    }
+  }
+  summary: "Multiplies a kvs by a vector."
+  is_aggregate: false
+  is_commutative: false
+}
+op {
+  name: "KvsDoVecKvsGrad"
+  input_arg {
+    name: "kvs"
+    description: "Elements of the kronecker vector stack."
+    type_attr: "T"
+    number_attr: "N"
+  }
+  input_arg {
+    name: "vec"
+    description: "Vector."
+    type_attr: "T"
+  }
+  input_arg {
+    name: "ingrad"
+    description: "Gradient of scalar loss f w.r.t. kvs of kvs_dot_vec(kvs, vec)"
+    type_attr: "T"
+  }
+  output_arg {
+    name: "kvsgrad"
+    type_attr: "T"
+    number_attr: "N"
+  }
+  attr {
+    name: "N"
+    type: "int"
+    has_minimum: true
+    minimum: 2
+  }
+  attr {
+    name: "T"
+    type: "type"
+    allowed_values {
+      list {
+        type: DT_FLOAT
+        type: DT_DOUBLE
+      }
+    }
+  }
+  summary: "Backprop gradient scalar loss f through kvs_dot_vec(kvs, vec) to kvs."
+  is_aggregate: false
+  is_commutative: false
+}
+op {
+  name: "KvsDoVecKvsGrad"
+  input_arg {
+    name: "kvs"
+    description: "Elements of the kronecker vector stack."
+    type_attr: "T"
+    number_attr: "N"
+  }
+  input_arg {
+    name: "ingrad"
+    description: "Gradient of scalar loss f w.r.t. vec of kvs_dot_vec(kvs, vec)"
+    type_attr: "T"
+  }
+  output_arg {
+    name: "vecgrad"
+    type_attr: "T"
+  }
+  attr {
+    name: "N"
+    type: "int"
+    has_minimum: true
+    minimum: 2
+  }
+  attr {
+    name: "T"
+    type: "type"
+    allowed_values {
+      list {
+        type: DT_FLOAT
+        type: DT_DOUBLE
+      }
+    }
+  }
+  summary: "Backprop gradient scalar loss f through kvs_dot_vec(kvs, vec) to vec."
+  is_aggregate: false
+  is_commutative: false
+}
+op {
   name: "AdjustContrast"
   input_arg {
     name: "images"

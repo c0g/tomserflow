@@ -18,6 +18,29 @@ limitations under the License.
 
 namespace tensorflow {
 
+REGISTER_OP("KvsDotVec")
+    .Input("kvs: N * T")
+    .Input("vec: T")
+    .Output("product: T")
+    .Attr("N: int >= 2")
+    .Attr("T: type");
+
+REGISTER_OP("KvsDotVecKvsGrad")
+    .Input("kvs: N * T")
+    .Input("vec: T")
+    .Input("ingrad: T")
+    .Output("kvsgrad: N*T")
+    .Attr("N: int >= 2")
+    .Attr("T: type");
+
+REGISTER_OP("KvsDotVecVecGrad")
+    .Input("kvs: N * T")
+    .Input("ingrad: T")
+    .Output("vecgrad: T")
+    .Attr("N: int >= 2")
+    .Attr("T: type");
+
+
 REGISTER_OP("AddN")
     .Input("inputs: N * T")
     .Output("sum: T")

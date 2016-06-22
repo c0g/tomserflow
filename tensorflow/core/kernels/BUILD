@@ -948,6 +948,7 @@ tf_kernel_libraries(
         "cwise_op",
         "fft_ops",
         "matmul_op",
+        "kvs_dot_vec_op",
         "reduction_ops",
         "segment_reduction_ops",
         "sequence_ops",

@@ -205,6 +205,7 @@ from tensorflow.python.ops import gen_data_flow_ops
 from tensorflow.python.ops import gen_math_ops
 from tensorflow.python.ops import gen_state_ops
 from tensorflow.python.ops import state_ops
+from tensorflow.python.framework import tensor_shape
 # go/tf-wildcard-import
 # pylint: disable=wildcard-import
 from tensorflow.python.ops.gen_math_ops import *
@@ -215,6 +216,21 @@ argmax = gen_math_ops.arg_max
 argmin = gen_math_ops.arg_min
 linspace = gen_math_ops.lin_space
 
+@ops.RegisterShape("KvsDotVec")
+def KvsShape(op):
+  return [tensor_shape.TensorShape([op.inputs[0].get_shape().with_rank(2)[0], 1])]
+
+@ops.RegisterShape("KvsDotVecKvsGrad")
+def KvsKvsGradShape(op):
+  return [m.get_shape() for m in op.inputs[:-2]]
+
+@ops.RegisterShape("KvsDotVecVecGrad")
+def KvsVecGradShape(op):
+  kvs = op.inputs[:-1]
+  vec_len = 1
+  for m in kvs:
+    vec_len *= int(m.get_shape().with_rank(2)[1])
+  return [tensor_shape.TensorShape([vec_len, 1])]
 
 # pylint: disable=anomalous-backslash-in-string,protected-access
 def abs(x, name=None):

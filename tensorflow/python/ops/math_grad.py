@@ -32,6 +32,14 @@ def _safe_shape_div(x, y):
   """Divides `x / y` assuming `x, y >= 0`, treating `0 / 0 = 0`."""
   return x // math_ops.maximum(y, 1)
 
+@ops.RegisterGradient("KvsDotVec")
+def _KvsDotVecGrad(op, grad):
+  kvs = op.inputs[:-1]
+  vec = op.inputs[-1]
+  gradkvs = math_ops.kvs_dot_vec_kvs_grad(kvs, vec, grad)
+  gradvec = math_ops.kvs_dot_vec_vec_grad(kvs, grad)  
+  return gradkvs + [gradvec]
+
 
 @ops.RegisterGradient("Sum")
 def _SumGrad(op, grad):
