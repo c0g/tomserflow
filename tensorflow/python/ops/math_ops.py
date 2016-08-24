@@ -76,6 +76,8 @@ functions on matrices to your graph.
 @@matmul
 @@batch_matmul
 
+@@kvs_dot_vec
+
 @@matrix_determinant
 @@batch_matrix_determinant
 
