@@ -76,7 +76,7 @@ functions on matrices to your graph.
 @@matmul
 @@batch_matmul
 
-@@kvs_dot_vec
+@@vec_dot_kvs
 
 @@matrix_determinant
 @@batch_matrix_determinant
@@ -218,21 +218,27 @@ argmax = gen_math_ops.arg_max
 argmin = gen_math_ops.arg_min
 linspace = gen_math_ops.lin_space
 
-@ops.RegisterShape("KvsDotVec")
+@ops.RegisterShape("VecDotKvs")
 def KvsShape(op):
-  return [tensor_shape.TensorShape([op.inputs[0].get_shape().with_rank(2)[0], 1])]
+  # width of kvs are the same. Take the first one.
+  width = op.inputs[1].get_shape().with_rank(2)[1]
+  return [tensor_shape.TensorShape([1, width])]
 
-@ops.RegisterShape("KvsDotVecKvsGrad")
+
+
+@ops.RegisterShape("VecDotKvsKvsGrad")
 def KvsKvsGradShape(op):
-  return [m.get_shape() for m in op.inputs[:-2]]
+  return [m.get_shape() for m in op.inputs[1:-1]]
 
-@ops.RegisterShape("KvsDotVecVecGrad")
+@ops.RegisterShape("VecDotKvsVecGrad")
 def KvsVecGradShape(op):
   kvs = op.inputs[:-1]
+  # print("kvs is {}".format(len(kvs)))
   vec_len = 1
   for m in kvs:
-    vec_len *= int(m.get_shape().with_rank(2)[1])
-  return [tensor_shape.TensorShape([vec_len, 1])]
+    vec_len *= int(m.get_shape().with_rank(2)[0])
+    # print(vec_len)
+  return [tensor_shape.TensorShape([1, vec_len])]
 
 # pylint: disable=anomalous-backslash-in-string,protected-access
 def abs(x, name=None):

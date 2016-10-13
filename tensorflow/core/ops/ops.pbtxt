@@ -117,17 +117,17 @@ op {
   is_commutative: true
 }
 op {
-  name: "KvsDoVec"
+  name: "VecDotKvs"
+  input_arg {
+    name: "vec"
+    description: "Vector."
+    type_attr: "T"
+  }
   input_arg {
     name: "kvs"
     description: "Elements of the kronecker vector stack."
     type_attr: "T"
     number_attr: "N"
-  }
-  input_arg {
-    name: "vec"
-    description: "Vector."
-    type_attr: "T"
   }
   output_arg {
     name: "product"
@@ -149,12 +149,17 @@ op {
       }
     }
   }
-  summary: "Multiplies a kvs by a vector."
+  summary: "Multiplies vector by an expanded Kronecker-vector stack without expanding the KVS."
   is_aggregate: false
   is_commutative: false
 }
 op {
-  name: "KvsDoVecKvsGrad"
+  name: "VecDotKvsKvsGrad"
+  input_arg {
+    name: "vec"
+    description: "Vector."
+    type_attr: "T"
+  }
   input_arg {
     name: "kvs"
     description: "Elements of the kronecker vector stack."
@@ -162,13 +167,8 @@ op {
     number_attr: "N"
   }
   input_arg {
-    name: "vec"
-    description: "Vector."
-    type_attr: "T"
-  }
-  input_arg {
     name: "ingrad"
-    description: "Gradient of scalar loss f w.r.t. kvs of kvs_dot_vec(kvs, vec)"
+    description: "Gradient of scalar loss f w.r.t. output of VecDotKvs(kvs, vec)"
     type_attr: "T"
   }
   output_arg {
@@ -192,12 +192,12 @@ op {
       }
     }
   }
-  summary: "Backprop gradient scalar loss f through kvs_dot_vec(kvs, vec) to kvs."
+  summary: "Backprop gradient scalar loss f through VecDotKvs(kvs, vec) to kvs."
   is_aggregate: false
   is_commutative: false
 }
 op {
-  name: "KvsDoVecKvsGrad"
+  name: "VecDotKvsVecGrad"
   input_arg {
     name: "kvs"
     description: "Elements of the kronecker vector stack."
@@ -206,7 +206,7 @@ op {
   }
   input_arg {
     name: "ingrad"
-    description: "Gradient of scalar loss f w.r.t. vec of kvs_dot_vec(kvs, vec)"
+    description: "Gradient of scalar loss f w.r.t. of VecDotKvs(kvs, vec)"
     type_attr: "T"
   }
   output_arg {
@@ -229,7 +229,7 @@ op {
       }
     }
   }
-  summary: "Backprop gradient scalar loss f through kvs_dot_vec(kvs, vec) to vec."
+  summary: "Backprop gradient scalar loss f through VecDotKvs(kvs, vec) to vec."
   is_aggregate: false
   is_commutative: false
 }

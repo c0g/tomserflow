@@ -67,7 +67,7 @@ namespace tensorflow {
 		    void operator()(const Eigen::GpuDevice& d, 
 		    	uint64 N, const T* diag, T* tensor) {
 		    	const uint64 tpb = 256;
-		    	const uint64 nblock = tpb / N + 1;
+		    	const uint64 nblock = N / tpb + ((N % tpb) != 0);
 		    	cu_set_diag<<<nblock, tpb, 0, d.stream()>>>(N, diag, tensor);
 		    }
 		};
@@ -76,7 +76,7 @@ namespace tensorflow {
 		    void operator()(const Eigen::GpuDevice& d, 
 		    	uint64 N, const T* tensor, T* diag)  {
 		    	const uint64 tpb = 256;
-		    	const uint64 nblock = tpb / N + 1;
+		    	const uint64 nblock = N / tpb + ((N % tpb) != 0);
 		    	cu_get_diag<<<nblock, tpb, 0, d.stream()>>>(N, tensor, diag);
 		    }
 		};
