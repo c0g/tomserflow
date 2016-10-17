@@ -263,18 +263,18 @@ __global__ void cu_vec_dot_kvs_vecgrad(const int W,  const int64_t vec_len,
 
 namespace tensorflow {
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs(const Eigen::GpuDevice & dev, const int W, const int64_t vec_len,
 		const int * d_heights, const int64_t * d_hprods,
 		const T* d_vec, const T * const * d_kvs, T* d_out) {
 		dim3 threads{1, BLOCK_SIZE_PARLOAD, 1};
 		dim3 nblocks{std::uint32_t(vec_len / BLOCK_SIZE_PARLOAD + ((vec_len % BLOCK_SIZE_PARLOAD) != 0)), 
 			std::uint32_t(W/BLOCK_SIZE_PARLOAD + ((W % BLOCK_SIZE_PARLOAD) != 0)), 1};
-		cu_vec_dot_kvs_par<T, D><<<nblocks, threads>>>(W, vec_len, d_heights, d_hprods,
+		cu_vec_dot_kvs_par<T, D><<<nblocks, threads, 0, dev.stream()>>>(W, vec_len, d_heights, d_hprods,
 								d_vec, d_kvs, d_out);
 	}
 
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs_kvsgrad(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs_kvsgrad(const Eigen::GpuDevice & dev, const int W, const int64_t vec_len,
 		const int * heights, const int * d_heights, const int64_t * d_hprods,
 		const T* d_vec, const T * const * d_kvs, const T* in_grad,
 		T** kvs_grad) {
@@ -282,17 +282,17 @@ namespace tensorflow {
 			dim3 threads{1, BLOCK_SIZE_KVSGRAD, 1};
 			dim3 nblocks{std::uint32_t(heights[targetD]),
 				std::uint32_t(W)/BLOCK_SIZE_KVSGRAD + ((W % BLOCK_SIZE_KVSGRAD) != 0), 1};
-			cu_vec_dot_kvs_kvsgrad<T, D><<<nblocks, threads>>>(targetD, W, d_heights, d_hprods, 
+			cu_vec_dot_kvs_kvsgrad<T, D><<<nblocks, threads, 0, dev.stream()>>>(targetD, W, d_heights, d_hprods, 
 								d_vec, d_kvs, in_grad, kvs_grad);
 		}
 	}
 
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs_vecgrad(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs_vecgrad(const Eigen::GpuDevice & dev, const int W, const int64_t vec_len,
 		const int * d_heights, const int64_t * d_hprods,
 		const T * const * d_kvs, const T* in_grad,
 		T* vec_grad) {
-		cu_vec_dot_kvs_vecgrad<T, D><<<vec_len, BLOCK_SIZE_VECGRAD>>>(
+		cu_vec_dot_kvs_vecgrad<T, D><<<vec_len, BLOCK_SIZE_VECGRAD, 0, dev.stream()>>>(
 			W, vec_len, d_heights, d_hprods, d_kvs, in_grad, vec_grad);
 	}
 
@@ -308,17 +308,19 @@ namespace tensorflow {
 
 }
 #define DEF_VEC_DOT_KVS(T, D) 										\
-template void tensorflow::launch_cu_vec_dot_kvs<T, D>(const int W,  \
+template void tensorflow::launch_cu_vec_dot_kvs<T, D>(const Eigen::GpuDevice & dev,\
+		const int W,  \
 		const int64_t vec_len,										\
 		const int * d_heights, const int64_t * d_hprods,			\
 		const T* d_vec, const T * const * d_kvs, T* d_out);			\
-template void tensorflow::launch_cu_vec_dot_kvs_kvsgrad<T, D>(		\
+template void tensorflow::launch_cu_vec_dot_kvs_kvsgrad<T, D>(const Eigen::GpuDevice & dev,\
 		const int W, const int64_t vec_len, 						\
 		const int * heights,										\
 		const int * d_heights, const int64_t * d_hprods,			\
 		const T* d_vec, const T * const * d_kvs, const T* in_grad,	\
 		T** kvs_grad);												\
-template void tensorflow::launch_cu_vec_dot_kvs_vecgrad<T, D>(		\
+template void tensorflow::launch_cu_vec_dot_kvs_vecgrad<T, D>(const Eigen::GpuDevice & dev,\
+				\
 		const int W, const int64_t vec_len, 						\
 		const int * d_heights, const int64_t * d_hprods,			\
 		const T * const * d_kvs, const T* in_grad,					\

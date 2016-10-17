@@ -59,7 +59,9 @@ import pipes
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
+# Unofficial setting. DO NOT SUBMIT!!!
 CPU_COMPILER = ('/usr/bin/gcc')
+# Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
 # Unofficial setting. DO NOT SUBMIT!!!
@@ -278,6 +280,7 @@ def InvokeNvcc(argv, log=False):
 
   # "configure" uses the specific format to substitute the following string.
   # If you change it, make sure you modify "configure" as well.
+  # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!
   # Unofficial setting. DO NOT SUBMIT!!!

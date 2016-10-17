@@ -22,18 +22,18 @@ namespace tensorflow {
 
 
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs(const Eigen::GpuDevice& dev, const int W, const int64_t vec_len,
 		const int * d_heights, const int64_t * d_hprods,
 		const T* d_vec, const T *const * d_kvs, T* d_out);
 
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs_kvsgrad(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs_kvsgrad(const Eigen::GpuDevice& dev, const int W, const int64_t vec_len,
 		const int * heights, const int * d_heights, const int64_t * d_hprods,
 		const T* d_vec, const T * const * d_kvs, const T* in_grad,
 		T** kvs_grad);
 
 	template <typename T, int D>
-	void launch_cu_vec_dot_kvs_vecgrad(const int W, const int64_t vec_len,
+	void launch_cu_vec_dot_kvs_vecgrad(const Eigen::GpuDevice& dev, const int W, const int64_t vec_len,
 		const int * d_heights, const int64_t * d_hprods,
 		const T * const * d_kvs, const T* in_grad,
 		T * vec_grad);

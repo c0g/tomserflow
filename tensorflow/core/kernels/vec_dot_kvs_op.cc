@@ -85,7 +85,7 @@ struct vec_dot_kvs_functor<GPUDevice, T, D> {
         stream->ThenMemcpy(&d_hprods, &hprods[0], sizeof(int64_t)*D);
 
 
-        launch_cu_vec_dot_kvs<T, D>(W, vec_len, 
+        launch_cu_vec_dot_kvs<T, D>(ctx->eigen_device<Eigen::GpuDevice>(), W, vec_len, 
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hcols),
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hprods),
             vec->flat<T>().data(), 
@@ -156,7 +156,7 @@ struct vec_dot_kvs_kvsgrad_functor<GPUDevice, T, D> {
         stream->ThenMemcpy(&d_hprods, &hprods[0], sizeof(int64_t)*D);
 
 
-        launch_cu_vec_dot_kvs_kvsgrad<T, D>(W, vec_len,
+        launch_cu_vec_dot_kvs_kvsgrad<T, D>(ctx->eigen_device<Eigen::GpuDevice>(), W, vec_len,
             hcols,
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hcols),
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hprods),
@@ -223,7 +223,7 @@ struct vec_dot_kvs_vecgrad_functor<GPUDevice, T, D> {
         stream->ThenMemcpy(&d_hprods, &hprods[0], sizeof(int64_t)*D);
 
 
-        launch_cu_vec_dot_kvs_vecgrad<T, D>(H, vec_len,
+        launch_cu_vec_dot_kvs_vecgrad<T, D>(ctx->eigen_device<Eigen::GpuDevice>(), H, vec_len,
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hcols),
             perftools::gputools::cuda::CUDAMemoryMutable(&d_hprods),
             perftools::gputools::cuda::CUDAMemoryMutable(&kvs_dptrs), 

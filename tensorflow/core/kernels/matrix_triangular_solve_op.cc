@@ -41,7 +41,6 @@ perftools::gputools::DeviceMemory<T> AsDeviceMemory(const T* cuda_memory)
     return typed;
 }
 }//namespace
-
 #endif  // GOOGLE_CUDA
 
 template <class Scalar, bool SupportsBatchOperationT>
