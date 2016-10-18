@@ -271,6 +271,7 @@ namespace tensorflow {
 			std::uint32_t(W/BLOCK_SIZE_PARLOAD + ((W % BLOCK_SIZE_PARLOAD) != 0)), 1};
 		cu_vec_dot_kvs_par<T, D><<<nblocks, threads, 0, dev.stream()>>>(W, vec_len, d_heights, d_hprods,
 								d_vec, d_kvs, d_out);
+		dev.ok();
 	}
 
 	template <typename T, int D>
@@ -285,6 +286,7 @@ namespace tensorflow {
 			cu_vec_dot_kvs_kvsgrad<T, D><<<nblocks, threads, 0, dev.stream()>>>(targetD, W, d_heights, d_hprods, 
 								d_vec, d_kvs, in_grad, kvs_grad);
 		}
+		dev.ok();
 	}
 
 	template <typename T, int D>
@@ -294,6 +296,7 @@ namespace tensorflow {
 		T* vec_grad) {
 		cu_vec_dot_kvs_vecgrad<T, D><<<vec_len, BLOCK_SIZE_VECGRAD, 0, dev.stream()>>>(
 			W, vec_len, d_heights, d_hprods, d_kvs, in_grad, vec_grad);
+		dev.ok();
 	}
 
 		namespace functor {
